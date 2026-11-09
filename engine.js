@@ -53,7 +53,7 @@ function evalGroup(c,dir,drv,pax,day){
   let km=0;for(let i=0;i<pts.length-1;i++)km+=c.dist(pts[i],pts[i+1]);
   if(!best||km<best.km)best={km,order,pts};
  }
- const solo=c.dist(drv.home,site);
+ const solo=dir==='matin'?c.dist(drv.home,site):c.dist(site,drv.home); /* même sens que le trajet : les routes ne sont pas symétriques (sens uniques) */
  const detour=best.km-solo;
  if(detour>p.maxDetourKm+1e-9)return null;
  const J=m=>m.jours[day];
@@ -89,7 +89,7 @@ function metrics(c,drv,g){
   if(x.aVoiture){prud+=km*(p.partVoiture*p.ef+(1-p.partVoiture)*p.efAlt);euros.pax+=km*(p.partVoiture*p.coutKm+(1-p.partVoiture)*p.coutAlt)-share}
   else{paxCarless++;prud+=km*p.efAlt;euros.pax+=km*p.coutAlt-share}
  });
- const add=g.detour*p.ef;
+ const add=Math.max(0,g.detour)*p.ef; /* un détour négatif (route via un arrêt plus courte en km que la route directe, qui est la plus rapide) ne crédite aucun CO2 */
  euros.drv=g.solo*p.coutKm-(g.km*p.coutKm-n*share);
  return {brut:brut-add,prudent:prud-add,detourCO2:add,paxCarless,share,eurosPax:euros.pax,eurosDrv:euros.drv,paxKm};
 }

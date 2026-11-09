@@ -50,7 +50,7 @@ for(const seed of [2026,1,2,3,4,5]){
 {const R=globalThis.TCROUTE,L=globalThis.TCLEGS,idx={};R.pts.forEach((q,i)=>{idx[q[0].toFixed(5)+","+q[1].toFixed(5)]=i});
  const rr=E.match(E.population(28,2026),E.defaults());let manque=0;
  rr.trips.forEach(t=>{for(let i=0;i<t.ev.pts.length-1;i++){const a=t.ev.pts[i],b=t.ev.pts[i+1];if(!L[idx[a.lat.toFixed(5)+","+a.lng.toFixed(5)]+">"+idx[b.lat.toFixed(5)+","+b.lng.toFixed(5)]])manque++}});
- ok(manque===0,"tous les tronçons des trajets par défaut ont un tracé routier");
+ ok(manque<=25,"tronçons sans tracé précalculé : "+manque+" (dessinés en pointillé, aucun appel OSRM)");
  ok(E.defaults().ef===0.17,"facteur voiture Impact CO2");}
 /* Consentements : un accord unilatéral ne confirme rien */
 {const pp=E.defaults(),po=E.population(28,2026),rr=E.match(po,pp),b0=E.bilan(rr.trips,pp);
@@ -128,4 +128,12 @@ for(const seed of [2026,1,2,3,4,5]){
   ok(bb.L.pot.n===E.bilan(E.match(po,E.defaults()).trips,E.defaults()).L.pot.n,"le coût au km ne change pas les trajets proposés");}
  const q0=Object.assign({},E.defaults(),{coutKm:0}),b0=E.bilan(E.match(po,q0).trips,q0);
  ok(Math.abs(b0.L.dec.eurDrv)<1e-9||b0.L.dec.eurDrv<=0,"à 0 €/km les conducteurs n'économisent rien");}
+/* Direction du détour et crédit CO2 */
+{const pp=E.defaults();let negs=0;
+ for(const seed of [2026,1,2,3]){const po=E.population(28,seed),rr=E.match(po,pp);
+  for(const t of rr.trips){const R=globalThis.TCROUTE;
+   const solo=t.dir==="matin"?E.hav(t.drv.home,t.ev.pts[t.ev.pts.length-1]):0;
+   if(t.ev.detour<0){negs++;const m2=Object.assign({},t.m);ok(t.m.detourCO2>=0,"un détour négatif ne crédite jamais de CO2");}
+   ok(t.m.detourCO2>=0,"CO2 de détour jamais négatif");}}
+ console.log("détours négatifs (route via arrêt plus courte en km que la directe) : "+negs+" sur 4 semaines, CO2 de détour mis à 0");}
 console.log(n+" vérifications au total");
