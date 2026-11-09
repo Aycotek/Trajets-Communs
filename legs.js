@@ -1,4 +1,4 @@
-/* ATTENTION : ne lancer que contre une instance de routage dont les conditions d'usage sont connues et respectées (serveur de démonstration public : politique non vérifiée, aucun nouvel appel prévu). Précalcul des tronçons routiers utilisés par les trajets de la semaine par défaut (node legs.js). OSRM public, 1 requête/s. */
+/* Précalcul des tronçons de la semaine par défaut (node legs.js). Conditions relevées le 9/11/2026 : politique du serveur de démonstration OSRM (wiki Project-OSRM, Api-usage-policy) et conditions FOSSGIS : usage léger, User-Agent identifiant l application, une seule connexion pour un script, attribution ODbL, pas de téléchargement massif ; aucune garantie, accès révocable. Pas de service de production sur ce serveur. */
 require("./route-data.js");require("./data.js");const E=require("./engine.js");const fs=require("fs");
 const R=globalThis.TCROUTE,idx={};R.pts.forEach((q,i)=>{idx[q[0].toFixed(5)+","+q[1].toFixed(5)]=i});
 const k=q=>idx[q.lat.toFixed(5)+","+q.lng.toFixed(5)];
@@ -12,7 +12,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
  for(const key of list){if(Date.now()-t0>95000)break;
   const [i,j]=key.split(">").map(Number);
   const u="https://router.project-osrm.org/route/v1/driving/"+R.pts[i][1].toFixed(5)+","+R.pts[i][0].toFixed(5)+";"+R.pts[j][1].toFixed(5)+","+R.pts[j][0].toFixed(5)+"?overview=simplified&geometries=geojson";
-  try{const x=await (await fetch(u)).json();if(x.code==="Ok")existing[key]=x.routes[0].geometry.coordinates.map(c=>[+c[0].toFixed(4),+c[1].toFixed(4)])}catch(e){}
+  try{const x=await (await fetch(u,{headers:{"User-Agent":"TrajetsCommuns-demo/1.0 (demo fictive, precalcul ponctuel; https://github.com/Aycotek/Trajets-Communs)","Referer":"https://aycotek.github.io/Trajets-Communs/"}})).json();if(x.code==="Ok")existing[key]=x.routes[0].geometry.coordinates.map(c=>[+c[0].toFixed(4),+c[1].toFixed(4)])}catch(e){}
   await sleep(1100)}
  fs.writeFileSync("legs.json",JSON.stringify(existing));
  const left=[...need].filter(x=>!existing[x]).length;console.log("restant",left);

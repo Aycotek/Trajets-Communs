@@ -9,7 +9,7 @@ Chiffres de la démo : semaine par défaut, 28 profils inventés, graine 2026. I
 ### 1. Aller sans retour, voiture restée à la maison
 - Risque : quelqu'un laisse sa voiture parce qu'un aller est confirmé, puis le retour tombe (conducteur absent, retard, annulation).
 - Ce que fait la démo : le soir, quand l'aller du matin est confirmé et que le retour est annulé ou absent, l'écran le dit en clair : "retour non assuré, aucun retour garanti, ni taxi ni prise en charge par l'entreprise". Aller et retour sont deux accords distincts.
-- Mesuré dans la démo : 73 % des créneaux-personne présents ont un trajet proposé (169 sur 230). Donc 27 % n'en ont pas. Le cas "pas de solution" n'est pas rare.
+- Mesuré dans la démo (semaine par défaut, 28 profils fictifs) : 75 % des créneaux-personne présents ont un trajet proposé (172 sur 230). Donc 25 % n'en ont pas. Le cas "pas de solution" n'est pas rare.
 - Décision de l'entreprise : garantir ou non un retour de secours (taxi, navette, voiture partagée, télétravail). La démo ne simule aucune garantie. BlaBlaCar Daily propose une "Garantie Retour" avec un assureur, plafonnée et sous conditions (source : ses pages d'aide publiques, consultées le 9 nov. 2026). C'est un produit commercial, pas une règle transposable.
 - Non vérifié : la règle d'annulation tardive et ses effets.
 
