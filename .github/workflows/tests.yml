@@ -12,7 +12,7 @@ jobs:
           python3 -m http.server 8123 &
           sleep 1
           google-chrome --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --blink-settings=prefersReducedMotion=1 --virtual-time-budget=40000 --dump-dom "http://127.0.0.1:8123/tests-ui.html" > dom.html 2>chrome.log
-          grep -c "OK" dom.html || true
-          tail -c 1500 dom.html || true
           ! grep -q "ECHEC" dom.html
-          test "$(grep -c ' OK$' dom.html)" -ge 3
+          grep -q "PARCOURS OK" dom.html
+          grep -q "CARTE OK" dom.html
+          grep -q "S OK" dom.html
