@@ -1,0 +1,16 @@
+name: tests
+on: [push, workflow_dispatch]
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tests moteur (node)
+        run: node tests.js
+      - name: Tests de parcours (navigateur sans tete)
+        run: |
+          python3 -m http.server 8123 &
+          sleep 1
+          google-chrome --headless --no-sandbox --disable-gpu --blink-settings=prefersReducedMotion=1 --virtual-time-budget=25000 --dump-dom "http://127.0.0.1:8123/tests-ui.html" > dom.html
+          ! grep -q "ECHEC" dom.html
+          test "$(grep -c ' OK$' dom.html)" -ge 3
