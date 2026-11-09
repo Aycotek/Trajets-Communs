@@ -35,7 +35,12 @@ E.population=function(n,seed){
 function hm(m){m=Math.round(m);return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0")}
 E.hm=hm;
 
-function ctx(p){return {p,dist:(a,b)=>hav(a,b)*p.detourFacteur,dur:km=>km/p.vitesse*60}}
+const RK=(a)=>a.lat.toFixed(5)+","+a.lng.toFixed(5);
+function ctx(p){
+ const R=g.TCROUTE,idx={};
+ if(R&&p.routeReel)R.pts.forEach((q,i)=>{idx[q[0].toFixed(5)+","+q[1].toFixed(5)]=i});
+ const look=(a,b)=>{const i=idx[RK(a)],j=idx[RK(b)];return(i!==undefined&&j!==undefined&&R.km[i][j]!=null)?[R.km[i][j],R.min[i][j]]:null};
+ return {p,dist:(a,b)=>{const r=look(a,b);return r?r[0]:hav(a,b)*p.detourFacteur},tt:(a,b)=>{const r=look(a,b);return r?r[1]:hav(a,b)*p.detourFacteur/p.vitesse*60}}}
 function point(pers){return pers.mode==="gare"&&pers.gare?pers.gare:pers.home}
 
 /* Évalue un groupe (conducteur + passagers ordonnés). Renvoie null si une contrainte casse. */
@@ -56,15 +61,15 @@ function evalGroup(c,dir,drv,pax,day){
  let t0,tFix;
  if(dir==="matin"){const lo=Math.max(...all.map(m=>J(m).a0)),hi=Math.min(...all.map(m=>J(m).a1));if(lo>hi)return null;tFix=lo}
  else{const lo=Math.max(...all.map(m=>J(m).d0)),hi=Math.min(...all.map(m=>J(m).d1));if(lo>hi)return null;tFix=lo}
- const dur=c.dur(best.km)+stop*pax.length;
+ let dur=stop*pax.length;for(let i=0;i<best.pts.length-1;i++)dur+=c.tt(best.pts[i],best.pts[i+1]);
  const depart=dir==="matin"?tFix-dur:tFix, arrive=dir==="matin"?tFix:tFix+dur;
  if(depart<330||arrive>1260)return null;
  /* minutes en plus par passager */
  const extras=best.order.map((x,i)=>{
   let inCar;
-  if(dir==="matin"){let k=0;for(let j=i+1;j<best.pts.length-1;j++)k+=c.dist(best.pts[j],best.pts[j+1]);const first=c.dist(best.pts[i+1],best.pts[i+2]);inCar=c.dur(k+first)+stop*(best.order.length-i-1)}
-  else{let k=0;for(let j=0;j<=i;j++)k+=c.dist(best.pts[j],best.pts[j+1]);inCar=c.dur(k)+stop*(i+1)}
-  const soloT=c.dur(c.dist(point(x),site));
+  if(dir==="matin"){let t=0;for(let j=i+1;j<best.pts.length-1;j++)t+=c.tt(best.pts[j],best.pts[j+1]);inCar=t+stop*(best.order.length-i-1)}
+  else{let t=0;for(let j=0;j<=i;j++)t+=c.tt(best.pts[j],best.pts[j+1]);inCar=t+stop*(i+1)}
+  const soloT=c.tt(point(x),site);
   return {id:x.id,extra:Math.max(0,inCar-soloT)};
  });
  if(extras.some(e=>e.extra>p.maxExtraMin+1e-9))return null;

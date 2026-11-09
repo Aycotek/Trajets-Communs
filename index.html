@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://tile.openstreetmap.org; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#6b1d2c">
 <title>Trajets Communs - démonstration</title>
@@ -38,6 +38,7 @@
 <footer class="pied">
   <p>Aucun salarié réel, aucun domicile réel, aucune trace GPS réelle. Les profils portent des noms d'arbres. Le site d'arrivée, les gares et les centres de communes sont les seuls points réels. Les gains sont des estimations avec hypothèses visibles, pas des mesures. Aucune certification n'est revendiquée. Voir <a href="SOURCES.md">SOURCES.md</a> et <a href="SECURITE.md">SECURITE.md</a>.</p>
 </footer>
+<script src="route-data.js"></script>
 <script src="data.js"></script>
 <script src="engine.js"></script>
 <script src="app.js"></script>

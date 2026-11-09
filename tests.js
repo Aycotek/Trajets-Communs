@@ -1,5 +1,5 @@
 /* Tests du moteur : node tests.js. Vérifient les invariants, pas la réalité métier. */
-const assert=require("assert");require("./data.js");const E=require("./engine.js");
+const assert=require("assert");require("./route-data.js");require("./data.js");const E=require("./engine.js");
 let n=0;const ok=(c,m)=>{assert(c,m);n++};
 const p=E.defaults(),pop=E.population(28,2026);
 ok(pop.length===28,"28 profils");
@@ -22,3 +22,29 @@ ok(E.match(pop,p3).trips.length<=r1.trips.length+5,"facteur route plus haut, pas
 console.log(n+" vérifications passées");
 const rouenParis=E.hav?E.hav({lat:49.4432,lng:1.0993},{lat:48.8566,lng:2.3522}):null;
 if(rouenParis!==null){assert(Math.abs(rouenParis-112)<3,"haversine Rouen-Paris");console.log("haversine ok "+rouenParis.toFixed(1));}
+
+/* Invariants sur ensembles (toujours vrais) et sur la métrique nette (pas toujours monotone). */
+const ids=(L)=>new Set(L.map(t=>t.id));
+for(const seed of [2026,1,2,3,4,5]){
+  const pp=E.defaults(),po=E.population(28,seed),rr=E.match(po,pp);
+  const bb=E.bilan(rr.trips,pp);
+  const acc=rr.trips.filter(t=>t.accepte),cor=acc.filter(t=>t.controle.verdict==="corroboré");
+  ok(acc.length>0&&cor.length>0,"niveaux non vides, graine "+seed);
+  ok(cor.every(t=>acc.includes(t))&&acc.every(t=>rr.trips.includes(t)),"corroboré inclus dans déclaré inclus dans potentiel (ensembles), graine "+seed);
+  const somme=cor.reduce((a,t)=>a+t.m.prudent,0);
+  ok(Math.abs(somme-bb.L.cor.prud)<1e-6,"bilan = somme des trajets, graine "+seed);
+  ok(bb.L.cor.n<=bb.L.dec.n,"nombre de trajets corroborés <= déclarés");
+}
+/* La graine 1 est un cas réel ou le CO2 net prudent corroboré dépasse le déclaré : retirer un trajet non corroboré dont le net est négatif fait monter le total. */
+{const pp=E.defaults(),rr=E.match(E.population(28,1),pp),bb=E.bilan(rr.trips,pp);
+ ok(bb.L.cor.prud>bb.L.dec.prud,"cas documenté : net non monotone (graine 1)");
+ const retires=rr.trips.filter(t=>t.accepte&&t.controle.verdict!=="corroboré");
+ ok(retires.reduce((a,t)=>a+t.m.prudent,0)<0,"les trajets retirés ont un net négatif cumulé");}
+/* Routage : routes précalculées vs estimation. */
+{const pa=E.defaults(),pb=Object.assign({},pa,{routeReel:0});
+ const R=globalThis.TCROUTE;ok(R&&R.pts.length>=30&&R.km[1][0]>0,"matrice routière chargée");
+ const ra=E.match(E.population(28,2026),pa),rb=E.match(E.population(28,2026),pb);
+ ok(ra.trips.length>0&&rb.trips.length>0,"deux modes de calcul fonctionnent");
+ const i=1,hv=E.hav({lat:R.pts[i][0],lng:R.pts[i][1]},{lat:R.pts[0][0],lng:R.pts[0][1]});
+ ok(R.km[i][0]>=hv*0.99,"distance routière >= vol d'oiseau");}
+console.log(n+" vérifications au total");

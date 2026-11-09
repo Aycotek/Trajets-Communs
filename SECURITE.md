@@ -18,3 +18,5 @@ Aucune certification (ISO/IEC 27001 ou autre) n'est revendiquée. L'annexe A de 
 | Fuite via les fournisseurs (cartes, routage) | Contrat, région d'hébergement, quotas, pas de données personnelles inutiles |
 | Faille applicative | Revue de code, tests, test d'intrusion avant mise en service |
 | Analyse d'impact et base légale | Décision du DPO de l'entreprise, avis des représentants du personnel |
+
+Mise à jour : la seule requête externe autorisée par la politique de sécurité du contenu est l'image des tuiles OpenStreetMap (img-src). Aucun script, aucune connexion de données (connect-src 'none'). Les tuiles révèlent à OpenStreetMap l'adresse IP du visiteur et la zone affichée : à traiter dans l'analyse de vie privée avant un vrai déploiement.

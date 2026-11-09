@@ -35,3 +35,8 @@ Les valeurs marquées "démonstration" sont des hypothèses à remplacer par une
 - Notifications Teams : Microsoft Graph, permission TeamsActivity.Send https://learn.microsoft.com/en-us/microsoftteams/platform/tabs/send-activity-feed-notification
 - Tuiles OpenStreetMap : User-Agent identifié, pas de téléchargement en masse https://operations.osmfoundation.org/policies/tiles/
 - Quotas de routage et de trafic gratuits (annoncés par les fournisseurs, à lire chez eux) : Google Routes, TomTom (relevé sur sites tiers). Aucun n'est branché ici.
+
+## Routage et fond de carte (ajout)
+- Distances et durées : calcul précalculé par precalc.js avec le serveur de démonstration public OSRM (router.project-osrm.org), profil voiture, sur données OpenStreetMap (ODbL). Une requête de matrice et une requête d'itinéraire par point, à raison d'une par seconde, sans abonnement. Résultat daté dans route-data.js. Sans trafic ni horaires, valable seulement pour les points fictifs de cette démo.
+- Constat mesuré : le rapport route / vol d'oiseau va de 1,21 à 2,16 selon le point (moyenne 1,63), au-dessus de l'hypothèse 1,3 de la première version.
+- Fond de carte : tuiles OpenStreetMap (© contributeurs OpenStreetMap), chargées depuis tile.openstreetmap.org, une vue fixe d'une douzaine de tuiles. La politique d'usage de la fondation OSM convient à une démonstration légère, pas à un déploiement : prévoir un fournisseur sous contrat ou des tuiles hébergées.

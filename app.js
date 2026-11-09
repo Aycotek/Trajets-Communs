@@ -41,7 +41,7 @@ function vueDG(){
   h("table",{class:"tab"},
    h("thead",null,h("tr",null,h("th",{text:"Niveau"}),h("th",{class:"n",text:"Brute /sem."}),h("th",{class:"n",text:"Prudente /sem."}),h("th",{class:"n",text:"Prudente /an"}))),
    h("tbody",null,["pot","dec","cor"].map(k=>h("tr",null,h("td",{text:{pot:"Potentiel",dec:"Déclaré",cor:"Corroboré"}[k]}),h("td",{class:"n",text:kg(L[k].brut)}),h("td",{class:"n",text:kg(L[k].prud)}),h("td",{class:"n",text:kg(an(L[k].prud))}))))),
-  h("div",{class:"note-limite",text:"Un passager sans voiture peut faire augmenter les émissions (le détour du conducteur s'ajoute) : c'est un gain d'accès, pas un gain CO₂. Une modélisation parisienne (CIRED) indique que sans mesures d'accompagnement 50 à 75 % des bénéfices d'un covoiturage urbain peuvent être annulés par des reports de mode et des distances plus longues. Sources et réserves dans SOURCES.md."}),
+  h("div",{class:"note-limite",text:"Un passager sans voiture peut faire augmenter les émissions (le détour du conducteur s'ajoute) : c'est un gain d'accès, pas un gain CO₂. Une modélisation parisienne (CIRED) indique que sans mesures d'accompagnement 50 à 75 % des bénéfices d'un covoiturage urbain peuvent être annulés par des reports de mode et des distances plus longues. Le nombre de trajets décroît toujours de potentiel à déclaré à corroboré, mais le CO₂ net, lui, peut remonter : un trajet écarté dont le net est négatif (gros détour) fait baisser le total quand il disparaît. Sources et réserves dans SOURCES.md."}),
   h("p",{class:"doux",text:"Facteur d'émission utilisé : "+p.ef+" kgCO₂e/km, valeur de démonstration à remplacer par la Base Empreinte ADEME."})));
  const eurAn=(L.cor.eurPax+L.cor.eurDrv)*w;
  const partDec=p.tarifTrajet*L.cor.n*w;
@@ -109,36 +109,51 @@ function carteTrajet(t){
   h("div",{class:"trajet-tete"},h("span",{class:"heure",text:(t.dir==="matin"?"Départ ":"Départ du site ")+E.hm(e.depart)+" → arrivée "+E.hm(e.arrive)}),h("span",{class:"puce-etat "+etat[0],text:etat[1]})),
   lignes,
   h("div",{class:"ligne-m"},h("span",{text:"Trajet estimé "+f1(e.km)+" km"}),h("span",{text:"détour conducteur "+f1(e.detour)+" km"}),h("span",{text:"temps en plus passager max "+f0(Math.max(...e.extras.map(x=>x.extra)))+" min"}),h("span",{text:"CO₂ net brut "+kg(m.brut)+" · prudent "+kg(m.prudent)}),h("span",{text:"part de frais par occupant "+eur2(m.share)})),
-  h("div",{class:"doux",text:"Temps et distances estimés à vol d'oiseau x "+S.p.detourFacteur+", sans trafic en direct."}));
+  h("div",{class:"doux",text:"Distances et durées "+(S.p.routeReel&&window.TCROUTE?"routières précalculées (OSRM/OpenStreetMap, sans trafic)":"estimées à vol d'oiseau x "+S.p.detourFacteur)+"."}));
 }
 
-/* ---------- Carte (schéma) ---------- */
-function proj(lat,lng){const la0=D.SITE.lat,lo0=D.SITE.lng;return {x:(lng-lo0)*111.32*Math.cos(la0*Math.PI/180),y:-(lat-la0)*110.57}}
+/* ---------- Carte : fond OpenStreetMap + tracés routiers précalculés ---------- */
+function mer(lat,lng,z){const n=256*Math.pow(2,z),r=Math.PI/180;return {x:(lng+180)/360*n,y:(1-Math.log(Math.tan(lat*r)+1/Math.cos(lat*r))/Math.PI)/2*n}}
 function vueCarte(){
  const el=$("#vue-carte");el.replaceChildren();
  const bar=h("div",{class:"barre-outils"});
  E.JOURS.forEach((j,i)=>bar.append(h("button",{class:i===S.carteJour?"actif":"",onclick:()=>{S.carteJour=i;vueCarte()},text:j})));
  ["matin","soir"].forEach(d=>bar.append(h("button",{class:d===S.carteDir?"actif":"",onclick:()=>{S.carteDir=d;vueCarte()},text:d==="matin"?"Matin":"Soir"})));
- const pts=[D.SITE,...D.GARES,...S.pop.map(x=>x.home)].map(q=>proj(q.lat,q.lng));
- const minx=Math.min(...pts.map(q=>q.x))-2,maxx=Math.max(...pts.map(q=>q.x))+2,miny=Math.min(...pts.map(q=>q.y))-2,maxy=Math.max(...pts.map(q=>q.y))+2;
- const W=700,H=Math.min(640,W*(maxy-miny)/(maxx-minx)),k=W/(maxx-minx);
- const X=q=>(q.x-minx)*k,Y=q=>(q.y-miny)*k;
- const svg=sv("svg",{class:"carte-svg",viewBox:"0 0 "+W+" "+Math.round((maxy-miny)*k),role:"img","aria-label":"Schéma des domiciles fictifs, des gares et du site d'arrivée"});
- const s0=proj(D.SITE.lat,D.SITE.lng);
- [5,10,20].forEach(r=>{svg.append(sv("circle",{cx:X(s0),cy:Y(s0),r:r*k,fill:"none",stroke:"#6b1d2c","stroke-opacity":".18","stroke-dasharray":"4 4"}));svg.append(sv("text",{x:X(s0)+r*k*.72,y:Y(s0)-r*k*.72,"font-size":"19",fill:"#6a5456"},r+" km"))});
+ const all=[D.SITE,...S.pop.map(x=>x.home)];
+ const la=all.map(q=>q.lat),lo=all.map(q=>q.lng);
+ const box={a:Math.min(...la)-.006,b:Math.max(...la)+.006,c:Math.min(...lo)-.01,d:Math.max(...lo)+.01};
+ let z=14,tl,br,nx,ny;
+ for(;z>=9;z--){tl=mer(box.b,box.c,z);br=mer(box.a,box.d,z);nx=Math.floor(br.x/256)-Math.floor(tl.x/256)+1;ny=Math.floor(br.y/256)-Math.floor(tl.y/256)+1;if(nx*ny<=16)break}
+ const ox=Math.floor(tl.x/256)*256,oy=Math.floor(tl.y/256)*256,W=nx*256,H=ny*256;
+ const P=q=>{const m=mer(q.lat,q.lng,z);return {x:m.x-ox,y:m.y-oy}};
+ const f=W/420;
+ const svg=sv("svg",{class:"carte-svg",viewBox:"0 0 "+W+" "+H,role:"img","aria-label":"Carte OpenStreetMap avec domiciles fictifs, gares, site d'arrivée et tracés routiers"});
+ svg.append(sv("rect",{x:0,y:0,width:W,height:H,fill:"#efe6d6"}));
+ const tx0=Math.floor(tl.x/256),ty0=Math.floor(tl.y/256);
+ for(let i=0;i<nx;i++)for(let j=0;j<ny;j++)svg.append(sv("image",{href:"https://tile.openstreetmap.org/"+z+"/"+(tx0+i)+"/"+(ty0+j)+".png",x:i*256,y:j*256,width:256,height:256,opacity:".92"}));
+ const R=window.TCROUTE,idx={};if(R)R.pts.forEach((q,i)=>{idx[q[0].toFixed(5)+","+q[1].toFixed(5)]=i});
+ const kk=q=>q.lat.toFixed(5)+","+q.lng.toFixed(5);
  const ts=S.res.trips.filter(t=>t.day===S.carteJour&&t.dir===S.carteDir);
  const col=["#6b1d2c","#b9802f","#2f6b3f","#2d5a8a","#8a2a8a","#7a5a2a"];
- ts.forEach((t,i)=>{const c=col[i%col.length];const path=t.ev.pts.map(q=>{const a=proj(q.lat,q.lng);return X(a).toFixed(1)+","+Y(a).toFixed(1)}).join(" ");svg.append(sv("polyline",{points:path,fill:"none",stroke:c,"stroke-width":"3.2","stroke-opacity":".85"}))});
+ let tracesReelles=0;
+ ts.forEach((t,i)=>{const c=col[i%col.length];const g=R&&R.routes[idx[kk(t.drv.home)]];
+  if(g){tracesReelles++;const path=g.map(q=>{const a=P({lat:q[1],lng:q[0]});return a.x.toFixed(1)+","+a.y.toFixed(1)}).join(" ");
+   svg.append(sv("polyline",{points:path,fill:"none",stroke:"#fff","stroke-width":6*f*.85,"stroke-linejoin":"round","stroke-opacity":".9"}));
+   svg.append(sv("polyline",{points:path,fill:"none",stroke:c,"stroke-width":3.4*f*.85,"stroke-linejoin":"round"}))}
+  else{const path=t.ev.pts.map(q=>{const a=P(q);return a.x.toFixed(1)+","+a.y.toFixed(1)}).join(" ");svg.append(sv("polyline",{points:path,fill:"none",stroke:c,"stroke-width":3*f*.85,"stroke-dasharray":"6 4"}))}
+  t.pax.forEach(x=>{const a=P(x.mode==="gare"&&x.gare?x.gare:x.home);svg.append(sv("circle",{cx:a.x,cy:a.y,r:7*f*.85,fill:"#fff",stroke:c,"stroke-width":3*f*.85}))})});
  const inTrip=new Set();ts.forEach(t=>{inTrip.add(t.drv.id);t.pax.forEach(x=>inTrip.add(x.id))});
- S.pop.forEach(x=>{const a=proj(x.home.lat,x.home.lng);const present=x.jours[S.carteJour].present;
-  svg.append(sv("circle",{cx:X(a),cy:Y(a),r:inTrip.has(x.id)?9:6,fill:!present?"#fff":x.aVoiture?"#6b1d2c":"#b9802f",stroke:"#3e0f19","stroke-width":present?1:1.2,"stroke-dasharray":present?"":"2 2","fill-opacity":inTrip.has(x.id)?1:.55}))});
- D.GARES.forEach(g=>{const a=proj(g.lat,g.lng);svg.append(sv("rect",{x:X(a)-8,y:Y(a)-8,width:16,height:16,fill:"#2d5a8a"}));svg.append(sv("text",{x:X(a)+8,y:Y(a)+4,"font-size":"19",fill:"#1f3e60"},g.nom))});
- svg.append(sv("polygon",{points:[[X(s0),Y(s0)-16],[X(s0)+14,Y(s0)+10],[X(s0)-14,Y(s0)+10]].map(q=>q.join(",")).join(" "),fill:"#3e0f19"}));
- svg.append(sv("text",{x:X(s0)+12,y:Y(s0)-4,"font-size":"22","font-weight":"700",fill:"#3e0f19"},"Site d'arrivée"));
- el.append(h("div",{class:"carte"},h("h2",{text:"Schéma des trajets"}),bar,svg,
-  h("div",{class:"leg"},h("span",null,h("i",{class:"d1"}),"avec voiture"),h("span",null,h("i",{class:"d2"}),"sans voiture"),h("span",{text:"carré bleu : gare · pointillé : absent ce jour (congé ou temps partiel)"})),
-  simBandeau("Schéma à vol d'oiseau, sans fond de carte ni appel externe : les domiciles sont des points inventés autour de centres de communes. Le fond de carte et les temps de route réels demandent un fournisseur de cartes et de routage, non branché ici.")));
- el.querySelector(".d1").setAttribute("style","");
+ S.pop.forEach(x=>{const a=P(x.home);const present=x.jours[S.carteJour].present;
+  svg.append(sv("circle",{cx:a.x,cy:a.y,r:(inTrip.has(x.id)?6:4.5)*f*.85,fill:!present?"#fff":x.aVoiture?"#6b1d2c":"#b9802f",stroke:"#3e0f19","stroke-width":f*.4,"stroke-dasharray":present?"":"2 2","fill-opacity":inTrip.has(x.id)?1:.6}))});
+ D.GARES.forEach(g=>{const a=P(g);const r=6*f*.85;svg.append(sv("rect",{x:a.x-r,y:a.y-r,width:2*r,height:2*r,fill:"#2d5a8a",stroke:"#fff","stroke-width":f*.3}));svg.append(sv("text",{x:a.x+r+3,y:a.y+4,"font-size":11*f*.85,fill:"#1f3e60",stroke:"#fff","stroke-width":f*.8,"paint-order":"stroke"},g.nom))});
+ const s0=P(D.SITE),r0=9*f*.85;
+ svg.append(sv("polygon",{points:[[s0.x,s0.y-r0*1.6],[s0.x+r0*1.4,s0.y+r0],[s0.x-r0*1.4,s0.y+r0]].map(q=>q.join(",")).join(" "),fill:"#3e0f19",stroke:"#fff","stroke-width":f*.4}));
+ svg.append(sv("text",{x:s0.x+r0*1.8,y:s0.y-r0*.5,"font-size":13*f*.85,"font-weight":"700",fill:"#3e0f19",stroke:"#fff","stroke-width":f,"paint-order":"stroke"},"Site d'arrivée"));
+ svg.append(sv("text",{x:W-4,y:H-5,"font-size":8*f*.85,"text-anchor":"end",fill:"#333",stroke:"#fff","stroke-width":f*.5,"paint-order":"stroke"},"© contributeurs OpenStreetMap"));
+ el.append(h("div",{class:"carte"},h("h2",{text:"Carte des trajets"}),bar,svg,
+  h("div",{class:"leg"},h("span",null,h("i",{class:"d1"}),"avec voiture"),h("span",null,h("i",{class:"d2"}),"sans voiture"),h("span",{text:"carré bleu : gare · cercle blanc cerclé : prise en charge · pointillé : absent ce jour"})),
+  h("p",{class:"doux",text:"Fond : OpenStreetMap (© contributeurs, ODbL), chargé depuis tile.openstreetmap.org. Tracés : itinéraire routier du conducteur vers le site, précalculé le "+(R?R.date:"?")+" (OSRM, sans trafic). Pour un trajet à plusieurs, l'arrêt de prise en charge est marqué mais le détour exact n'est pas tracé : "+tracesReelles+" trajet(s) tracé(s) sur "+ts.length+"."}),
+  simBandeau("Domiciles inventés (calés sur la route la plus proche pour le calcul). Les politiques d'usage des tuiles OpenStreetMap conviennent à une démonstration légère, pas à un déploiement : il faudra un fournisseur de fond de carte sous contrat ou un hébergement de tuiles.")));
  const i1=el.querySelector(".leg i.d1"),i2=el.querySelector(".leg i.d2");i1.style.background="#6b1d2c";i2.style.background="#b9802f";
 }
 
@@ -218,7 +233,7 @@ function vueReel(){
   ["Connexion avec le compte professionnel (Teams)","non","Simulée par un sélecteur de profils. Réel : application Teams enregistrée dans Microsoft Entra ID, connexion unique, accord de l'administrateur du tenant et de la DSI."],
   ["Notifications Teams","non","Absentes. Réel : notifications du fil d'activité via Microsoft Graph, avec permission d'envoi consentie ou validée par l'administrateur."],
   ["Comptes persistants et domiciles","non","Rien n'est stocké : cette page est statique. Réel : serveur, base chiffrée, droits par rôle, journal d'audit, suppression des données."],
-  ["Temps de route et trafic en direct","non","Estimations à vol d'oiseau paramétrables. Réel : moteur de routage et fournisseur de cartes, avec quotas et licences à vérifier avant tout engagement."],
+  ["Temps de route et trafic en direct","non","Distances et durées précalculées (OSRM sur OpenStreetMap, sans trafic) pour les points fictifs. Réel : moteur de routage et fond de carte sous contrat, avec quotas et licences à vérifier."],
   ["Traces de déplacement réelles","non","Jeux de test uniquement. Réel : application mobile, information et base légale, droits des personnes."],
   ["Analyse d'impact (AIPD) et DPO","à faire","À décider avec le DPO de l'entreprise : la CNIL liste les traitements de localisation à large échelle parmi ceux qui peuvent en exiger une."],
   ["Hébergement sécurisé et tests d'intrusion","non","Pas de serveur ici. Réel : hébergement choisi par l'entreprise, revue de code, test d'intrusion."],
