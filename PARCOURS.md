@@ -58,3 +58,11 @@ Adoption : combien de gestes par jour (cible : zéro à un) ? Comment démarrer 
 - https://support.blablacardaily.com/contents/la-garantie-retour-q6VtL6do/steps/q6X865cs
 - https://support.blablacardaily.com/contents/Methodes-de-paiement-Fe7cC--Q
 - https://www.blablacardaily.com/terms
+
+## Mise à jour du 9 novembre 2026 (état du code)
+- Consentement : accepter, refuser, revenir sur sa décision. L'acceptation d'un seul participant ne confirme jamais un trajet. Les autres participants sont simulés et le dire est affiché. La récurrence est un consentement explicite, non durable dans la démo (sessionStorage), retiré au retrait.
+- Retrait ou refus d'une personne : seuls les trajets touchés sont recalculés. Les trajets confirmés ailleurs restent figés. Un changement de composition, d'horaire ou de point de prise en charge demande un nouvel accord explicite (clé de trajet avec heure de départ).
+- Détour calculé dans le sens du trajet (aller ou retour), car les routes ne sont pas symétriques. Un détour peut rester négatif en km (l'itinéraire direct est le plus rapide, pas le plus court) : le CO2 de détour est plafonné à 0.
+- Carte : les 21 tronçons restés sans tracé ont été précalculés le 9/11 (usage léger, User-Agent identifiant, conditions relevées dans SOURCES.md). Un point déplacé affiche « non calculé ». L'IP et la zone vue du visiteur parviennent au serveur de tuiles OSM : indiqué dans l'application.
+- Ordre de priorité des propositions : règle de départage décrite dans le moteur, sans mesure d'équité ; aucune équité n'est prouvée.
+- Reste non fait : symboles de carte en plus de la couleur, mesure à 390 px, moteur de routage de production.
