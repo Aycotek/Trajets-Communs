@@ -1,0 +1,49 @@
+/* Compléments à la direction artistique beige et bordeaux. */
+main{max-width:860px;margin:0 auto;padding:0 12px 20px}
+.onglets-large{max-width:860px;overflow-x:auto;scrollbar-width:none}
+.onglets-large::-webkit-scrollbar{display:none}
+.onglets-large button{flex:0 0 auto;padding:9px 13px;min-height:44px}
+.etiq-demo{font-size:.7rem;font-weight:700;letter-spacing:.04em;color:#fff;background:var(--bordeaux);padding:6px 12px;border-radius:999px}
+h2{font-family:var(--serif);color:var(--bordeaux-nuit);font-size:1.25rem;margin:2px 0 8px}
+h3{font-family:var(--serif);color:var(--bordeaux-nuit);font-size:1.02rem;margin:0 0 6px}
+p,li{font-size:.9rem}
+.doux{color:var(--doux);font-size:.82rem}
+.grille{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:10px 0}
+.kpi{background:rgba(255,255,255,.7);border:1px solid var(--bord);border-radius:16px;padding:10px 12px}
+.kpi b{display:block;font-family:var(--serif);font-size:1.5rem;color:var(--bordeaux-nuit);line-height:1.15}
+.kpi span{font-size:.76rem;color:var(--doux)}
+.kpi.neg b{color:var(--alerte)}
+.etage{display:grid;grid-template-columns:1fr;gap:8px}
+.barre-n{height:22px;border-radius:11px;background:linear-gradient(90deg,var(--bordeaux-2),var(--bordeaux));color:#fff;font-size:.78rem;display:flex;align-items:center;padding:0 10px;min-width:40px;white-space:nowrap}
+.barre-n.c2{background:linear-gradient(90deg,#c18a45,var(--or))}
+.barre-n.c3{background:linear-gradient(90deg,#4a8a5a,var(--ok))}
+.tab{width:100%;border-collapse:collapse;font-size:.84rem}
+.tab th,.tab td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--bord);vertical-align:top}
+.tab th{color:var(--bordeaux);font-weight:700;font-size:.76rem}
+.tab td.n{text-align:right;font-variant-numeric:tabular-nums}
+.note-limite{background:#fff6e3;border:1px solid #e8cf9a;border-radius:12px;padding:8px 12px;font-size:.82rem;margin:8px 0;color:#5b4318}
+.sim{background:#eef3ee;border:1px dashed #7ba083;border-radius:12px;padding:8px 12px;font-size:.8rem;margin:8px 0;color:#26482f}
+.barre-outils{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0 10px}
+.barre-outils button,.barre-outils select{min-height:44px;border-radius:999px;border:1px solid var(--bord);background:rgba(255,255,255,.7);color:var(--bordeaux);padding:0 14px;font-size:.86rem;font-weight:600;cursor:pointer}
+.barre-outils button.actif{background:linear-gradient(135deg,var(--bordeaux-2),var(--bordeaux));color:#fff}
+.barre-outils label{font-size:.82rem;color:var(--doux)}
+.trajet{background:var(--verre-fort);border:1px solid var(--bord);border-radius:16px;padding:12px;margin-bottom:10px}
+.trajet-tete{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center}
+.heure{font-family:var(--serif);font-size:1.15rem;color:var(--bordeaux-nuit)}
+.puce-etat{font-size:.72rem;font-weight:700;border-radius:999px;padding:3px 10px}
+.e-prop{background:#eee;color:#555}.e-res{background:#fdeccd;color:#6b4a0c}.e-conf{background:#dcefe0;color:#1f5a30}
+.ligne-m{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.78rem;color:var(--doux);margin-top:6px}
+.masque-id{letter-spacing:.2em;color:var(--doux)}
+.champ-l{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;margin:10px 0 2px}
+.champ-l input[type=range]{width:100%;min-height:32px;accent-color:#6b1d2c}
+.champ-l input[type=number],.champ-l input[type=time]{min-height:40px;border-radius:10px;border:1px solid var(--bord);padding:0 8px;background:#fff;width:90px;font-size:.9rem}
+.champ-l .v{font-weight:700;color:var(--bordeaux-nuit);min-width:56px;text-align:right}
+.champ-l .src{grid-column:1/-1;font-size:.72rem;color:var(--doux)}
+svg.carte-svg{width:100%;height:auto;background:rgba(255,250,243,.7);border:1px solid var(--bord);border-radius:16px}
+.leg{display:flex;flex-wrap:wrap;gap:10px;font-size:.75rem;color:var(--doux);margin-top:6px}
+.leg i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px}
+.statuts li{margin:4px 0}
+.s-non{color:var(--alerte);font-weight:700}.s-fait{color:var(--ok);font-weight:700}.s-sim{color:#8a6a1a;font-weight:700}
+.verdict{font-weight:700}
+.v-corr{color:var(--ok)}.v-rev{color:#8a6a1a}.v-rej{color:var(--alerte)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}

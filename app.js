@@ -1,0 +1,237 @@
+(function(){
+"use strict";
+const D=window.TCDATA,E=window.TCENGINE;
+const S={p:E.defaults(),pop:E.population(28,2026),day:0,dir:"matin",avant:90,regleId:"capture",viewer:"dg",profil:"P01",scen:"conforme",res:null,bil:null,carteJour:0,carteDir:"matin"};
+const $=s=>document.querySelector(s);
+function h(tag,attrs,...kids){const e=document.createElement(tag);if(attrs)for(const k in attrs){if(k==="class")e.className=attrs[k];else if(k.startsWith("on"))e.addEventListener(k.slice(2),attrs[k]);else if(k==="text")e.textContent=attrs[k];else e.setAttribute(k,attrs[k])}
+ kids.flat().forEach(c=>{if(c==null||c===false)return;e.append(c.nodeType?c:document.createTextNode(String(c)))});return e}
+const svgNS="http://www.w3.org/2000/svg";
+function sv(tag,attrs,...kids){const e=document.createElementNS(svgNS,tag);if(attrs)for(const k in attrs)e.setAttribute(k,attrs[k]);kids.flat().forEach(c=>{if(c==null)return;e.append(c.nodeType?c:document.createTextNode(String(c)))});return e}
+const f1=x=>(Math.round(x*10)/10).toLocaleString("fr-FR",{minimumFractionDigits:1,maximumFractionDigits:1});
+const f0=x=>Math.round(x).toLocaleString("fr-FR");
+const eur=x=>(x<0?"−":"")+Math.abs(x).toLocaleString("fr-FR",{minimumFractionDigits:0,maximumFractionDigits:0})+" €";
+const eur2=x=>(x<0?"−":"")+Math.abs(x).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";
+const kg=x=>(x<0?"−":"")+f1(Math.abs(x))+" kg";
+const byId=id=>S.pop.find(x=>x.id===id);
+
+function recompute(){S.res=E.match(S.pop,S.p);S.bil=E.bilan(S.res.trips,S.p)}
+function simBandeau(t){return h("div",{class:"sim",role:"note"},t)}
+
+/* ---------- Décision ---------- */
+function vueDG(){
+ const el=$("#vue-dg");el.replaceChildren();
+ const L=S.bil.L,p=S.p,w=p.semaines;
+ const present=S.pop.length;
+ const rate=(a,b)=>b?Math.round(100*a/b)+" %":"-";
+ el.append(h("div",{class:"carte"},
+  h("h2",{text:"Ce que la direction peut décider"}),
+  h("p",{text:"Une semaine simulée pour "+present+" profils fictifs vers le site de Mont-Saint-Aignan. Chaque chiffre dit s'il est estimé, déclaré ou corroboré, et sur quelle hypothèse il repose."}),
+  simBandeau("Simulation : profils, domiciles, traces de test et taux d'acceptation sont inventés. Ils illustrent le calcul, ils ne prédisent pas l'adoption réelle."),
+  h("h3",{text:"Trois niveaux, jamais mélangés"}),
+  etage([["Potentiel estimé : trajets proposés par l'algorithme",L.pot.n,"",L.pot.n],["Trajets déclarés : propositions acceptées",L.dec.n,"c2",L.pot.n],["Trajets corroborés : traces de test conformes",L.cor.n,"c3",L.pot.n]]),
+  h("div",{class:"grille"},
+   kpi(rate(L.cor.n,L.dec.n),"des trajets déclarés corroborés (test)"),
+   kpi(L.cor.people.size+" / "+present,"profils ayant fait au moins un trajet corroboré"),
+   kpi(L.cor.paxCarless,"places occupées par des profils sans voiture (corroborées)")
+  )));
+ const an=x=>x*w;
+ el.append(h("div",{class:"carte"},
+  h("h3",{text:"CO₂ : deux méthodes affichées côte à côte"}),
+  h("p",{class:"doux",text:"Brute : le passager aurait pris sa voiture (logique des observatoires). Prudente : seulement une part des passagers avec voiture l'aurait prise ; un passager sans voiture se déplaçait autrement. Dans les deux cas on retranche le détour du conducteur."}),
+  h("table",{class:"tab"},
+   h("thead",null,h("tr",null,h("th",{text:"Niveau"}),h("th",{class:"n",text:"Brute /sem."}),h("th",{class:"n",text:"Prudente /sem."}),h("th",{class:"n",text:"Prudente /an"}))),
+   h("tbody",null,["pot","dec","cor"].map(k=>h("tr",null,h("td",{text:{pot:"Potentiel",dec:"Déclaré",cor:"Corroboré"}[k]}),h("td",{class:"n",text:kg(L[k].brut)}),h("td",{class:"n",text:kg(L[k].prud)}),h("td",{class:"n",text:kg(an(L[k].prud))}))))),
+  h("div",{class:"note-limite",text:"Un passager sans voiture peut faire augmenter les émissions (le détour du conducteur s'ajoute) : c'est un gain d'accès, pas un gain CO₂. Une modélisation parisienne (CIRED) indique que sans mesures d'accompagnement 50 à 75 % des bénéfices d'un covoiturage urbain peuvent être annulés par des reports de mode et des distances plus longues. Sources et réserves dans SOURCES.md."}),
+  h("p",{class:"doux",text:"Facteur d'émission utilisé : "+p.ef+" kgCO₂e/km, valeur de démonstration à remplacer par la Base Empreinte ADEME."})));
+ const eurAn=(L.cor.eurPax+L.cor.eurDrv)*w;
+ const partDec=p.tarifTrajet*L.cor.n*w;
+ const perPerson=L.cor.n?p.tarifTrajet*L.cor.n*w/Math.max(1,L.cor.people.size):0;
+ el.append(h("div",{class:"carte"},
+  h("h3",{text:"Euros pour les collaborateurs et pour l'entreprise"}),
+  h("div",{class:"grille"},
+   kpi(eur(L.cor.eurDrv*w),"économie nette des conducteurs, trajets corroborés, par an"),
+   kpiN(L.cor.eurPax*w,"bilan des passagers, trajets corroborés, par an"),
+   kpi(eur(partDec),"option B : participation de l'entreprise par an (tarif "+eur2(p.tarifTrajet)+")"),
+   kpi(eur(p.coutFixe),"coût annuel de la solution : à renseigner")),
+  h("p",{class:"doux",text:"Option A (partage de frais) : chaque occupant paie une part égale du coût du trajet, le conducteur ne gagne rien (le covoiturage est non onéreux, sauf partage des frais). Les passagers sans voiture peuvent payer plus que leur autre mode : c'est visible ici, à discuter."}),
+  perPerson>600?h("div",{class:"alerte",text:"Avec ce tarif, la participation moyenne par profil actif dépasse 600 € par an : au-delà du plafond d'exonération indiqué par Service-Public (2026), à faire valider par la paie."}):null,
+  h("div",{class:"note-limite",text:"Tarif de l'option B, coûts et paramètres : réglables dans Réglages. Rien n'est versé, aucun paiement n'existe dans cette démonstration."})));
+ el.append(h("div",{class:"carte"},h("h3",{text:"Ce que ces chiffres ne prouvent pas"}),
+  h("ul",null,
+   h("li",{text:"Un trajet corroboré prouve que deux traces ont bougé ensemble, pas qu'aucun accord entre les deux personnes n'a gonflé le bénéfice."}),
+   h("li",{text:"Le passager aurait-il pris sa voiture ? Seule une enquête interne le dit. La méthode prudente le paramètre."}),
+   h("li",{text:"Les taux d'acceptation et de conformité viennent d'hypothèses de démonstration : un pilote réel les mesurera."}),
+   h("li",{text:"Les chiffres publiés par des entreprises partenaires de plateformes sont leurs déclarations ; ils montrent un usage, pas l'effet causal du dispositif."}))));
+}
+function etage(rows){const max=Math.max(1,...rows.map(r=>r[3]));return h("div",{class:"etage"},rows.map(r=>{const b=h("div",{class:"barre-n "+r[2],text:String(r[1])});b.style.width=Math.max(8,100*r[1]/max)+"%";return h("div",null,h("div",{class:"doux",text:r[0]}),b)}))}
+function kpi(v,l){return h("div",{class:"kpi"},h("b",{text:String(v)}),h("span",{text:l}))}
+function kpiN(v,l){return h("div",{class:"kpi"+(v<0?" neg":"")},h("b",{text:eur(v)}),h("span",{text:l}))}
+
+/* ---------- Trajets ---------- */
+function vueTrajets(){
+ const el=$("#vue-trajets");el.replaceChildren();
+ const bar=h("div",{class:"barre-outils"});
+ E.JOURS.forEach((j,i)=>bar.append(h("button",{class:i===S.day?"actif":"",onclick:()=>{S.day=i;vueTrajets()},text:j})));
+ ["matin","soir"].forEach(d=>bar.append(h("button",{class:d===S.dir?"actif":"",onclick:()=>{S.dir=d;vueTrajets()},text:d==="matin"?"Matin":"Soir"})));
+ const vsel=h("select",{"aria-label":"Voir comme",onchange:e=>{S.viewer=e.target.value;vueTrajets()}},h("option",{value:"dg",text:"Vue direction (agrégée)"}),S.pop.map(x=>h("option",{value:x.id,text:"Voir comme "+x.nom})));vsel.value=S.viewer;
+ const rsel=h("select",{"aria-label":"Règle d'identité",onchange:e=>{S.regleId=e.target.value;vueTrajets()}},h("option",{value:"capture",text:"Identités visibles à 30 min du départ"}),h("option",{value:"ouverte",text:"Identités visibles dès l'acceptation"}));rsel.value=S.regleId;
+ const clock=h("input",{type:"range",min:0,max:180,step:5,value:S.avant,"aria-label":"Minutes avant le départ",oninput:e=>{S.avant=+e.target.value;lab.textContent="Il reste "+S.avant+" min avant le départ (horloge simulée)";renderList()}});
+ const lab=h("span",{class:"doux",text:"Il reste "+S.avant+" min avant le départ (horloge simulée)"});
+ el.append(h("div",{class:"carte"},h("h2",{text:"Trajets proposés"}),bar,h("div",{class:"barre-outils"},vsel,rsel),h("div",{class:"barre-outils"},clock),lab,
+  simBandeau("Règle des captures : avant 30 min les participants peuvent annuler et ne se connaissent pas ; ensuite le trajet est confirmé et les identités sont données. L'adresse exacte du domicile n'est montrée qu'au conducteur du trajet, après confirmation. Les deux variantes sont comparables ici : le choix reste à la direction."),
+  h("div",{id:"liste-trajets"})));
+ function renderList(){
+  const box=$("#liste-trajets");box.replaceChildren();
+  const ts=S.res.trips.filter(t=>t.day===S.day&&t.dir===S.dir);
+  const idle=S.pop.filter(x=>x.jours[S.day].present&&!ts.some(t=>t.drv.id===x.id||t.pax.some(q=>q.id===x.id)));
+  if(!ts.length)box.append(h("p",{class:"doux",text:"Aucun trajet proposé ce jour et ce sens avec les réglages actuels."}));
+  ts.forEach(t=>box.append(carteTrajet(t)));
+  box.append(h("p",{class:"doux",text:idle.length+" profil(s) présent(s) sans trajet proposé ce jour et ce sens (aucun partenaire compatible avec les horaires, le détour maximal ou le temps en plus)."}));
+ }
+ renderList();
+}
+function carteTrajet(t){
+ const viewer=S.viewer,isPart=viewer===t.drv.id||t.pax.some(x=>x.id===viewer);
+ const verrou=S.avant<=30;
+ let etat,visible;
+ if(!t.accepte){etat=["e-prop","Proposition non acceptée"];visible=false}
+ else if(S.regleId==="ouverte"){etat=["e-conf","Accepté : identités visibles"];visible=true}
+ else if(verrou){etat=["e-conf","Confirmé : identités visibles"];visible=true}
+ else{etat=["e-res","Réservé : annulable, identités masquées"];visible=false}
+ const nom=(x,role)=>visible&&isPart&&x.id!==viewer?x.nom:(x.id===viewer?"Vous ("+x.nom+")":(role+" "+"●●●●"));
+ const lignes=[h("div",null,"Conducteur : ",h("b",{text:nom(t.drv,"Conducteur")})),
+  ...t.pax.map(x=>h("div",null,"Passager : ",h("b",{text:nom(x,"Passager")}),x.mode==="gare"?" · arrive à la gare "+x.gare.nom:" · prise en charge à domicile"))];
+ if(visible&&viewer===t.drv.id)t.pax.forEach(x=>lignes.push(h("div",{class:"doux",text:"Prise en charge de "+x.nom+" : "+(x.mode==="gare"?"gare "+x.gare.nom:x.adresse+" (adresse fictive)")})));
+ if(!isPart&&viewer!=="dg")lignes.push(h("div",{class:"doux",text:"Vous n'êtes pas sur ce trajet : seul le nombre de participants est visible."}));
+ if(viewer==="dg")lignes.push(h("div",{class:"doux",text:"Vue direction : noms et adresses jamais affichés."}));
+ const m=t.m,e=t.ev;
+ return h("div",{class:"trajet"},
+  h("div",{class:"trajet-tete"},h("span",{class:"heure",text:(t.dir==="matin"?"Départ ":"Départ du site ")+E.hm(e.depart)+" → arrivée "+E.hm(e.arrive)}),h("span",{class:"puce-etat "+etat[0],text:etat[1]})),
+  lignes,
+  h("div",{class:"ligne-m"},h("span",{text:"Trajet estimé "+f1(e.km)+" km"}),h("span",{text:"détour conducteur "+f1(e.detour)+" km"}),h("span",{text:"temps en plus passager max "+f0(Math.max(...e.extras.map(x=>x.extra)))+" min"}),h("span",{text:"CO₂ net brut "+kg(m.brut)+" · prudent "+kg(m.prudent)}),h("span",{text:"part de frais par occupant "+eur2(m.share)})),
+  h("div",{class:"doux",text:"Temps et distances estimés à vol d'oiseau x "+S.p.detourFacteur+", sans trafic en direct."}));
+}
+
+/* ---------- Carte (schéma) ---------- */
+function proj(lat,lng){const la0=D.SITE.lat,lo0=D.SITE.lng;return {x:(lng-lo0)*111.32*Math.cos(la0*Math.PI/180),y:-(lat-la0)*110.57}}
+function vueCarte(){
+ const el=$("#vue-carte");el.replaceChildren();
+ const bar=h("div",{class:"barre-outils"});
+ E.JOURS.forEach((j,i)=>bar.append(h("button",{class:i===S.carteJour?"actif":"",onclick:()=>{S.carteJour=i;vueCarte()},text:j})));
+ ["matin","soir"].forEach(d=>bar.append(h("button",{class:d===S.carteDir?"actif":"",onclick:()=>{S.carteDir=d;vueCarte()},text:d==="matin"?"Matin":"Soir"})));
+ const pts=[D.SITE,...D.GARES,...S.pop.map(x=>x.home)].map(q=>proj(q.lat,q.lng));
+ const minx=Math.min(...pts.map(q=>q.x))-2,maxx=Math.max(...pts.map(q=>q.x))+2,miny=Math.min(...pts.map(q=>q.y))-2,maxy=Math.max(...pts.map(q=>q.y))+2;
+ const W=700,H=Math.min(640,W*(maxy-miny)/(maxx-minx)),k=W/(maxx-minx);
+ const X=q=>(q.x-minx)*k,Y=q=>(q.y-miny)*k;
+ const svg=sv("svg",{class:"carte-svg",viewBox:"0 0 "+W+" "+Math.round((maxy-miny)*k),role:"img","aria-label":"Schéma des domiciles fictifs, des gares et du site d'arrivée"});
+ const s0=proj(D.SITE.lat,D.SITE.lng);
+ [5,10,20].forEach(r=>{svg.append(sv("circle",{cx:X(s0),cy:Y(s0),r:r*k,fill:"none",stroke:"#6b1d2c","stroke-opacity":".18","stroke-dasharray":"4 4"}));svg.append(sv("text",{x:X(s0)+r*k*.72,y:Y(s0)-r*k*.72,"font-size":"19",fill:"#6a5456"},r+" km"))});
+ const ts=S.res.trips.filter(t=>t.day===S.carteJour&&t.dir===S.carteDir);
+ const col=["#6b1d2c","#b9802f","#2f6b3f","#2d5a8a","#8a2a8a","#7a5a2a"];
+ ts.forEach((t,i)=>{const c=col[i%col.length];const path=t.ev.pts.map(q=>{const a=proj(q.lat,q.lng);return X(a).toFixed(1)+","+Y(a).toFixed(1)}).join(" ");svg.append(sv("polyline",{points:path,fill:"none",stroke:c,"stroke-width":"3.2","stroke-opacity":".85"}))});
+ const inTrip=new Set();ts.forEach(t=>{inTrip.add(t.drv.id);t.pax.forEach(x=>inTrip.add(x.id))});
+ S.pop.forEach(x=>{const a=proj(x.home.lat,x.home.lng);const present=x.jours[S.carteJour].present;
+  svg.append(sv("circle",{cx:X(a),cy:Y(a),r:inTrip.has(x.id)?9:6,fill:!present?"#fff":x.aVoiture?"#6b1d2c":"#b9802f",stroke:"#3e0f19","stroke-width":present?1:1.2,"stroke-dasharray":present?"":"2 2","fill-opacity":inTrip.has(x.id)?1:.55}))});
+ D.GARES.forEach(g=>{const a=proj(g.lat,g.lng);svg.append(sv("rect",{x:X(a)-8,y:Y(a)-8,width:16,height:16,fill:"#2d5a8a"}));svg.append(sv("text",{x:X(a)+8,y:Y(a)+4,"font-size":"19",fill:"#1f3e60"},g.nom))});
+ svg.append(sv("polygon",{points:[[X(s0),Y(s0)-16],[X(s0)+14,Y(s0)+10],[X(s0)-14,Y(s0)+10]].map(q=>q.join(",")).join(" "),fill:"#3e0f19"}));
+ svg.append(sv("text",{x:X(s0)+12,y:Y(s0)-4,"font-size":"22","font-weight":"700",fill:"#3e0f19"},"Site d'arrivée"));
+ el.append(h("div",{class:"carte"},h("h2",{text:"Schéma des trajets"}),bar,svg,
+  h("div",{class:"leg"},h("span",null,h("i",{class:"d1"}),"avec voiture"),h("span",null,h("i",{class:"d2"}),"sans voiture"),h("span",{text:"carré bleu : gare · pointillé : absent ce jour (congé ou temps partiel)"})),
+  simBandeau("Schéma à vol d'oiseau, sans fond de carte ni appel externe : les domiciles sont des points inventés autour de centres de communes. Le fond de carte et les temps de route réels demandent un fournisseur de cartes et de routage, non branché ici.")));
+ el.querySelector(".d1").setAttribute("style","");
+ const i1=el.querySelector(".leg i.d1"),i2=el.querySelector(".leg i.d2");i1.style.background="#6b1d2c";i2.style.background="#b9802f";
+}
+
+/* ---------- Profil ---------- */
+function vueProfil(){
+ const el=$("#vue-profil");el.replaceChildren();
+ const x=byId(S.profil);
+ const sel=h("select",{"aria-label":"Profil",onchange:e=>{S.profil=e.target.value;vueProfil()}},S.pop.map(q=>h("option",{value:q.id,text:q.nom+" ("+q.role+")"})));sel.value=S.profil;
+ const tbl=h("table",{class:"tab"},h("thead",null,h("tr",null,["Jour","Présent","Arrivée entre","Départ entre"].map(t=>h("th",{text:t})))));
+ const tb=h("tbody");
+ const toT=m=>E.hm(m),fromT=v=>{const a=v.split(":");return (+a[0])*60+(+a[1])};
+ x.jours.forEach((j,i)=>{
+  const cb=h("input",{type:"checkbox","aria-label":"Présent "+E.JOURS[i],onchange:e=>{j.present=e.target.checked;refresh()}});cb.checked=j.present;
+  const tin=(key)=>{const t=h("input",{type:"time",value:toT(j[key]),"aria-label":key+" "+E.JOURS[i],onchange:e=>{if(e.target.value){j[key]=fromT(e.target.value);refresh()}}});return t};
+  tb.append(h("tr",null,h("td",{text:E.JOURS[i]}),h("td",null,cb,j.present?"":" congé"),h("td",null,tin("a0")," – ",tin("a1")),h("td",null,tin("d0")," – ",tin("d1"))));
+ });
+ tbl.append(tb);
+ el.append(h("div",{class:"carte"},h("h2",{text:"Profil de démonstration"}),
+  simBandeau("Ceci n'est pas une connexion. Un vrai compte demande une authentification (par exemple le compte professionnel via Teams), une base de données et l'accord de la DSI : voir l'onglet Réel. Ici on choisit un profil fictif pour montrer l'effet des horaires et des congés."),
+  h("div",{class:"barre-outils"},sel),
+  h("p",null,h("b",{text:x.nom}),", "+x.commune+", "+(x.aVoiture?(x.role==="flexible"?"a une voiture et accepte d'alterner":"a une voiture et conduit"):"n'a pas de voiture")+(x.mode==="gare"?", arrive par la gare "+x.gare.nom:", prise en charge à domicile")),
+  h("p",{class:"doux",text:"Adresse fictive : "+x.adresse}),
+  tbl,
+  h("p",{class:"doux",text:"Chaque changement relance l'appariement : décale une plage ou pose un congé, puis regarde l'onglet Trajets."}),
+  h("div",{id:"mes-trajets"})));
+ function mes(){const box=$("#mes-trajets");box.replaceChildren();
+  const ts=S.res.trips.filter(t=>t.drv.id===x.id||t.pax.some(q=>q.id===x.id));
+  box.append(h("h3",{text:"Trajets proposés cette semaine : "+ts.length}));
+  ts.forEach(t=>box.append(h("div",{class:"doux",text:E.JOURS[t.day]+" "+t.dir+" : "+(t.drv.id===x.id?"conducteur":"passager")+", départ "+E.hm(t.ev.depart)+", arrivée "+E.hm(t.ev.arrive)})));}
+ mes();
+ function refresh(){recompute();mes();vueDG();vueTrajets();vueCarte();vueControles()}
+}
+
+/* ---------- Contrôles anti-abus ---------- */
+function vueControles(){
+ const el=$("#vue-controles");el.replaceChildren();
+ const r={};D.REGLES.forEach(x=>r[x.k]=S.p[x.k]);
+ const sc=E.SCENARIOS[S.scen];
+ const ev=E.reglesEval(sc.t,r);
+ const sel=h("select",{"aria-label":"Scénario de trace de test",onchange:e=>{S.scen=e.target.value;vueControles()}},Object.keys(E.SCENARIOS).map(k=>h("option",{value:k,text:E.SCENARIOS[k].l})));sel.value=S.scen;
+ const L=S.res.trips;const cnt={"corroboré":0,"à vérifier":0,"rejeté":0};L.filter(t=>t.accepte).forEach(t=>cnt[t.controle.verdict]++);
+ const vc=v=>v==="corroboré"?"v-corr":v==="à vérifier"?"v-rev":"v-rej";
+ const tab=h("table",{class:"tab"},h("thead",null,h("tr",null,h("th",{text:"Mesure du trajet de test"}),h("th",{class:"n",text:"Valeur"}))),h("tbody",null,
+  [["Distance au point de rencontre (m)",sc.t.rencontreM],["Écart horaire (min)",sc.t.ecartMin],["Part du trajet faite ensemble",Math.round(sc.t.copres*100)+" %"],["Vitesse moyenne (km/h)",sc.t.vit],["Distance tracée / attendue",sc.t.ratio],["Appareil partagé entre comptes",sc.t.appareilDouble?"oui":"non"],["Trajets le même jour",sc.t.trajetsJour],["Même binôme dans la semaine",sc.t.binomeSem]].map(a=>h("tr",null,h("td",{text:a[0]}),h("td",{class:"n",text:String(a[1])})))));
+ el.append(h("div",{class:"carte"},h("h2",{text:"Contrôles anti-abus"}),
+  h("p",{text:"Principe : aucun avantage financier sans trajet corroboré, et un humain regarde ce que les règles ne tranchent pas. Un trajet 'corroboré' prouve que deux traces ont bougé ensemble, il ne prouve pas l'absence de complicité."}),
+  simBandeau("Les mesures ci-dessous sont des jeux de test écrits à la main, pas des positions de vraies personnes. Elles servent à vérifier que les règles réagissent comme prévu et à régler les seuils."),
+  h("div",{class:"barre-outils"},sel),tab,
+  h("p",null,"Verdict : ",h("span",{class:"verdict "+vc(ev.verdict),text:ev.verdict})),
+  ev.flags.length?h("ul",null,ev.flags.map(f=>h("li",null,"["+(f.gr==="rejet"?"rejet":"revue")+"] "+f.m))):h("p",{class:"doux",text:"Aucune règle déclenchée."}),
+  h("h3",{text:"Résultat sur la semaine simulée (trajets déclarés)"}),
+  h("div",{class:"grille"},kpi(cnt["corroboré"],"corroborés"),kpi(cnt["à vérifier"],"à vérifier par un humain"),kpi(cnt["rejeté"],"rejetés")),
+  h("div",{class:"note-limite",text:"Limites assumées : le binôme qui s'entend pour déclarer des trajets réels mais non nécessaires, ou qui gonfle la valeur d'un trajet, reste difficile à voir avec des traces seules. Réponses : peu d'argent par trajet, plafonds, audit par échantillon, comparaison avec les badgeages d'accès et la présence déclarée, suppression du compte en cas d'abus. Un signal vu dans la presse régionale : des primes versées sans passager réel sur une plateforme grand public. Sources dans SOURCES.md."})));
+ const th=h("div",{class:"carte"},h("h3",{text:"Seuils des règles"}),h("p",{class:"doux",text:"Chaque seuil est un choix à valider avec la direction. Le Registre de preuve de covoiturage applique par exemple : rejet au-delà de 4 trajets par personne et par jour, et au-delà de 70 % de chevauchement entre deux trajets d'un même passager."}));
+ D.REGLES.forEach(x=>th.append(champ(x.l,S.p[x.k],x.step||1,0,x.k==="vmax"?300:x.k==="rayonM"?2000:x.k==="tolMin"?60:x.k==="maxJour"?10:x.k==="binomeSem"?20:3,v=>{S.p[x.k]=v;recompute();vueDG();vueTrajets();vueCarte();vueControles()},"Seuil de démonstration.")));
+ el.append(th);
+}
+
+/* ---------- Réglages ---------- */
+function champ(label,val,step,min,max,onch,src){
+ const out=h("span",{class:"v",text:String(val)});
+ const inp=h("input",{type:"range",min:String(min),max:String(max),step:String(step),value:String(val),"aria-label":label,onchange:e=>{onch(+e.target.value)},oninput:e=>{out.textContent=e.target.value}});
+ return h("div",{class:"champ-l"},h("label",{text:label}),out,inp,src?h("div",{class:"src",text:src}):null);
+}
+function vueReglages(){
+ const el=$("#vue-reglages");el.replaceChildren();
+ const c=h("div",{class:"carte"},h("h2",{text:"Hypothèses et paramètres"}),h("p",{class:"doux",text:"Chaque valeur dit d'où elle vient. Une hypothèse de démonstration doit être remplacée par une mesure ou une source avant toute décision."}));
+ D.PARAMS.forEach(x=>c.append(champ(x.l,S.p[x.k],x.step,x.min,x.max,v=>{S.p[x.k]=v;recompute();vueDG();vueTrajets();vueCarte();vueControles();vueProfil()},x.src)));
+ c.append(h("div",{class:"barre-outils"},h("button",{onclick:()=>{S.p=E.defaults();recompute();all()},text:"Revenir aux valeurs initiales"})));
+ el.append(c);
+}
+
+/* ---------- Réel ---------- */
+function vueReel(){
+ const el=$("#vue-reel");el.replaceChildren();
+ const rows=[
+  ["Connexion avec le compte professionnel (Teams)","non","Simulée par un sélecteur de profils. Réel : application Teams enregistrée dans Microsoft Entra ID, connexion unique, accord de l'administrateur du tenant et de la DSI."],
+  ["Notifications Teams","non","Absentes. Réel : notifications du fil d'activité via Microsoft Graph, avec permission d'envoi consentie ou validée par l'administrateur."],
+  ["Comptes persistants et domiciles","non","Rien n'est stocké : cette page est statique. Réel : serveur, base chiffrée, droits par rôle, journal d'audit, suppression des données."],
+  ["Temps de route et trafic en direct","non","Estimations à vol d'oiseau paramétrables. Réel : moteur de routage et fournisseur de cartes, avec quotas et licences à vérifier avant tout engagement."],
+  ["Traces de déplacement réelles","non","Jeux de test uniquement. Réel : application mobile, information et base légale, droits des personnes."],
+  ["Analyse d'impact (AIPD) et DPO","à faire","À décider avec le DPO de l'entreprise : la CNIL liste les traitements de localisation à large échelle parmi ceux qui peuvent en exiger une."],
+  ["Hébergement sécurisé et tests d'intrusion","non","Pas de serveur ici. Réel : hébergement choisi par l'entreprise, revue de code, test d'intrusion."],
+  ["Certification ISO/IEC 27001","jamais revendiquée","Une certification vient d'un organisme accrédité. La conception s'inspire de l'annexe A comme grille de contrôles, rien de plus."],
+  ["Versements aux salariés","non","Aucun paiement n'existe. Réel : règles de paie, plafonds du forfait mobilités durables, attestation sur l'honneur."]
+ ];
+ el.append(h("div",{class:"carte"},h("h2",{text:"Ce qui reste à faire pour le réel"}),h("p",{text:"Cette démonstration montre le calcul et l'expérience. Elle ne remplace pas un déploiement : voici ce qui n'est pas fait."}),
+  h("ul",{class:"statuts"},rows.map(r=>h("li",null,h("b",{text:r[0]+" : "}),h("span",{class:r[1]==="non"||r[1]==="jamais revendiquée"?"s-non":"s-sim",text:r[1]}),h("div",{class:"doux",text:r[2]})))),
+  h("p",{class:"doux",text:"Sécurité de cette page : aucune requête externe, aucun cookie, aucune donnée saisie envoyée, politique de sécurité de contenu stricte. Détail dans SECURITE.md."})));
+}
+
+function all(){vueDG();vueTrajets();vueCarte();vueProfil();vueControles();vueReglages();vueReel()}
+document.querySelectorAll(".onglets button").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".onglets button").forEach(x=>x.classList.toggle("actif",x===b));document.querySelectorAll(".vue").forEach(v=>v.classList.toggle("actif",v.id==="vue-"+b.dataset.vue));window.scrollTo(0,0)}));
+recompute();all();
+const hv=(location.hash||"").slice(1);if(hv){const b=document.querySelector('.onglets button[data-vue="'+hv.replace(/[^a-z]/g,"")+'"]');if(b)b.click()}
+})();
