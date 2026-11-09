@@ -153,7 +153,7 @@ function vueProfil(){
  x.jours.forEach((j,i)=>{
   const cb=h("input",{type:"checkbox","aria-label":"Présent "+E.JOURS[i],onchange:e=>{j.present=e.target.checked;refresh()}});cb.checked=j.present;
   const tin=(key)=>{const t=h("input",{type:"time",value:toT(j[key]),"aria-label":key+" "+E.JOURS[i],onchange:e=>{if(e.target.value){j[key]=fromT(e.target.value);refresh()}}});return t};
-  tb.append(h("tr",null,h("td",{text:E.JOURS[i]}),h("td",null,cb,j.present?"":" congé"),h("td",null,tin("a0")," – ",tin("a1")),h("td",null,tin("d0")," – ",tin("d1"))));
+  tb.append(h("tr",null,h("td",{text:E.JOURS[i]}),h("td",null,cb,j.present?"":" congé"),h("td",null,h("div",{class:"plage"},tin("a0"),tin("a1"))),h("td",null,h("div",{class:"plage"},tin("d0"),tin("d1")))));
  });
  tbl.append(tb);
  el.append(h("div",{class:"carte"},h("h2",{text:"Profil de démonstration"}),

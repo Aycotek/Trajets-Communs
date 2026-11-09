@@ -47,3 +47,6 @@ svg.carte-svg{width:100%;height:auto;background:rgba(255,250,243,.7);border:1px 
 .verdict{font-weight:700}
 .v-corr{color:var(--ok)}.v-rev{color:#8a6a1a}.v-rej{color:var(--alerte)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.plage{display:flex;flex-direction:column;gap:4px}
+.plage input[type=time]{width:112px}
