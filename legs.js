@@ -1,4 +1,4 @@
-/* Précalcul des tronçons routiers utilisés par les trajets de la semaine par défaut (node legs.js). OSRM public, 1 requête/s. */
+/* ATTENTION : ne lancer que contre une instance de routage dont les conditions d'usage sont connues et respectées (serveur de démonstration public : politique non vérifiée, aucun nouvel appel prévu). Précalcul des tronçons routiers utilisés par les trajets de la semaine par défaut (node legs.js). OSRM public, 1 requête/s. */
 require("./route-data.js");require("./data.js");const E=require("./engine.js");const fs=require("fs");
 const R=globalThis.TCROUTE,idx={};R.pts.forEach((q,i)=>{idx[q[0].toFixed(5)+","+q[1].toFixed(5)]=i});
 const k=q=>idx[q.lat.toFixed(5)+","+q.lng.toFixed(5)];

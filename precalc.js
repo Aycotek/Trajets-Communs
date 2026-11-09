@@ -1,4 +1,4 @@
-/* Précalcul unique (node precalc.js) : distances et durées routières entre les points FICTIFS de la démo,
+/* ATTENTION : ne lancer que contre une instance de routage dont les conditions d'usage sont connues et respectées (serveur de démonstration public : politique non vérifiée, aucun nouvel appel prévu). Précalcul unique (node precalc.js) : distances et durées routières entre les points FICTIFS de la démo,
    via le serveur de démonstration public OSRM sur données OpenStreetMap (© contributeurs OpenStreetMap, ODbL).
    Quelques requêtes seulement, une par seconde, aucun abonnement. Résultat daté dans route-data.js. */
 require("./data.js");const E=require("./engine.js"),D=global.TCDATA||globalThis.TCDATA;

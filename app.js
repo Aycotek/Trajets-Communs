@@ -42,7 +42,7 @@ function vueDG(){
    h("thead",null,h("tr",null,h("th",{text:"Niveau"}),h("th",{class:"n",text:"Brute /sem."}),h("th",{class:"n",text:"Prudente /sem."}),h("th",{class:"n",text:"Prudente /an"}))),
    h("tbody",null,["pot","dec","cor"].map(k=>h("tr",null,h("td",{text:{pot:"Potentiel",dec:"Déclaré",cor:"Corroboré"}[k]}),h("td",{class:"n",text:kg(L[k].brut)}),h("td",{class:"n",text:kg(L[k].prud)}),h("td",{class:"n",text:kg(an(L[k].prud))}))))),
   h("div",{class:"note-limite",text:"Un passager sans voiture peut faire augmenter les émissions (le détour du conducteur s'ajoute) : c'est un gain d'accès, pas un gain CO₂. Une modélisation parisienne (CIRED) indique que sans mesures d'accompagnement 50 à 75 % des bénéfices d'un covoiturage urbain peuvent être annulés par des reports de mode et des distances plus longues. Le nombre de trajets décroît toujours de potentiel à déclaré à corroboré, mais le CO₂ net, lui, peut remonter : un trajet écarté dont le net est négatif (gros détour) fait baisser le total quand il disparaît. Sources et réserves dans SOURCES.md."}),
-  h("p",{class:"doux",text:"Facteur d'émission utilisé : "+p.ef+" kgCO₂e par km et par voiture (Impact CO2, voiture thermique moyenne essence, 9 nov. 2026). Le parc réel demande la Base Empreinte ADEME."})));
+  h("p",{class:"doux",text:"Facteur d'émission utilisé : "+p.ef+" kgCO₂e par km et par voiture (Impact CO2, page voiture thermique essence, adresse « compacte », 9 nov. 2026 : pas une moyenne du parc, modifiable dans Réglages). Le parc réel demande la Base Empreinte ADEME."})));
  const eurAn=(L.cor.eurPax+L.cor.eurDrv)*w;
  const partDec=p.tarifTrajet*L.cor.n*w;
  const perPerson=L.cor.n?p.tarifTrajet*L.cor.n*w/Math.max(1,L.cor.people.size):0;
@@ -117,9 +117,13 @@ function mer(lat,lng,z){const n=256*Math.pow(2,z),r=Math.PI/180;return {x:(lng+1
 function vueCarte(){
  const el=$("#vue-carte");el.replaceChildren();
  const bar=h("div",{class:"barre-outils"});
- E.JOURS.forEach((j,i)=>bar.append(h("button",{class:i===S.carteJour?"actif":"",onclick:()=>{S.carteJour=i;vueCarte()},text:j})));
- ["matin","soir"].forEach(d=>bar.append(h("button",{class:d===S.carteDir?"actif":"",onclick:()=>{S.carteDir=d;vueCarte()},text:d==="matin"?"Matin":"Soir"})));
- const all=[D.SITE,...S.pop.map(x=>x.home)];
+ E.JOURS.forEach((j,i)=>bar.append(h("button",{class:i===S.carteJour?"actif":"",onclick:()=>{S.carteJour=i;S.carteSel=null;vueCarte()},text:j})));
+ ["matin","soir"].forEach(d=>bar.append(h("button",{class:d===S.carteDir?"actif":"",onclick:()=>{S.carteDir=d;S.carteSel=null;vueCarte()},text:d==="matin"?"Matin":"Soir"})));
+ const tsAll=S.res.trips.filter(t=>t.day===S.carteJour&&t.dir===S.carteDir);
+ const sel=S.carteSel!=null&&tsAll[S.carteSel]?tsAll[S.carteSel]:null;
+ const choix=h("select",{"aria-label":"Choisir un trajet à agrandir",onchange:e=>{S.carteSel=e.target.value===""?null:+e.target.value;vueCarte()}},h("option",{value:"",text:"Tous les trajets"}),...tsAll.map((t,i)=>h("option",{value:String(i),text:"Zoom : "+t.drv.nom.replace("Profil ","")+" + "+t.pax.length+" passager(s), "+E.hm(t.ev.depart)+"-"+E.hm(t.ev.arrive)})));
+ choix.value=sel?String(S.carteSel):"";bar.append(choix);
+ const all=sel?[...sel.ev.pts]:[D.SITE,...S.pop.map(x=>x.home)];
  const la=all.map(q=>q.lat),lo=all.map(q=>q.lng);
  const box={a:Math.min(...la)-.006,b:Math.max(...la)+.006,c:Math.min(...lo)-.01,d:Math.max(...lo)+.01};
  let z=14,tl,br,nx,ny;
@@ -133,7 +137,7 @@ function vueCarte(){
  for(let i=0;i<nx;i++)for(let j=0;j<ny;j++)svg.append(sv("image",{href:"https://tile.openstreetmap.org/"+z+"/"+(tx0+i)+"/"+(ty0+j)+".png",x:i*256,y:j*256,width:256,height:256,opacity:".92"}));
  const R=window.TCROUTE,idx={};if(R)R.pts.forEach((q,i)=>{idx[q[0].toFixed(5)+","+q[1].toFixed(5)]=i});
  const kk=q=>q.lat.toFixed(5)+","+q.lng.toFixed(5);
- const ts=S.res.trips.filter(t=>t.day===S.carteJour&&t.dir===S.carteDir);
+ const ts=sel?[sel]:tsAll;
  const col=["#6b1d2c","#b9802f","#2f6b3f","#2d5a8a","#8a2a8a","#7a5a2a"];
  let tracesReelles=0;
  ts.forEach((t,i)=>{const c=col[i%col.length];const g=R&&R.routes[idx[kk(t.drv.home)]];
@@ -251,5 +255,5 @@ function vueReel(){
 function all(){vueDG();vueTrajets();vueCarte();vueProfil();vueControles();vueReglages();vueReel()}
 document.querySelectorAll(".onglets button").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".onglets button").forEach(x=>x.classList.toggle("actif",x===b));document.querySelectorAll(".vue").forEach(v=>v.classList.toggle("actif",v.id==="vue-"+b.dataset.vue));window.scrollTo(0,0)}));
 recompute();all();
-const hv=(location.hash||"").slice(1);if(hv){const b=document.querySelector('.onglets button[data-vue="'+hv.replace(/[^a-z]/g,"")+'"]');if(b)b.click()}
+const hv=(location.hash||"").slice(1);if(hv){const b=document.querySelector('.onglets button[data-vue="'+hv.replace(/[^a-z]/g,"")+'"]');if(b){b.click();const m=/-(\d+)$/.exec(location.hash);if(m&&hv.startsWith('carte')){S.carteSel=+m[1];vueCarte()}}}
 })();
