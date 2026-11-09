@@ -178,7 +178,10 @@ function vueCarte(){
   t.pax.forEach(x=>{const a=P(x.mode==="gare"&&x.gare?x.gare:x.home);svg.append(sv("circle",{cx:a.x,cy:a.y,r:7*f*.85,fill:"#fff",stroke:c,"stroke-width":3*f*.85}))})});
  const inTrip=new Set();ts.forEach(t=>{inTrip.add(t.drv.id);t.pax.forEach(x=>inTrip.add(x.id))});
  S.pop.forEach(x=>{const a=P(x.home);const present=x.jours[S.carteJour].present;
-  svg.append(sv("circle",{cx:a.x,cy:a.y,r:(inTrip.has(x.id)?6:4.5)*f*.85,fill:!present?"#fff":x.aVoiture?"#6b1d2c":"#b9802f",stroke:"#3e0f19","stroke-width":f*.4,"stroke-dasharray":present?"":"2 2","fill-opacity":inTrip.has(x.id)?1:.6}))});
+  const r=(inTrip.has(x.id)?6:4.5)*f*.85,fill=!present?"#fff":x.aVoiture?"#6b1d2c":"#b9802f";
+  const at={fill,stroke:"#3e0f19","stroke-width":f*.4,"stroke-dasharray":present?"":"2 2","fill-opacity":inTrip.has(x.id)?1:.6};
+  if(x.aVoiture)svg.append(sv("circle",Object.assign({cx:a.x,cy:a.y,r},at)));
+  else{const q=r*1.15;svg.append(sv("polygon",Object.assign({points:[[a.x,a.y-q],[a.x+q,a.y],[a.x,a.y+q],[a.x-q,a.y]].map(p=>p.join(",")).join(" ")},at)))}});
  D.GARES.forEach(g=>{const a=P(g);const r=6*f*.85;svg.append(sv("rect",{x:a.x-r,y:a.y-r,width:2*r,height:2*r,fill:"#2d5a8a",stroke:"#fff","stroke-width":f*.3}));svg.append(sv("text",{x:a.x+r+3,y:a.y+4,"font-size":11*f*.85,fill:"#1f3e60",stroke:"#fff","stroke-width":f*.8,"paint-order":"stroke"},g.nom))});
  const s0=P(D.SITE),r0=9*f*.85;
  svg.append(sv("polygon",{points:[[s0.x,s0.y-r0*1.6],[s0.x+r0*1.4,s0.y+r0],[s0.x-r0*1.4,s0.y+r0]].map(q=>q.join(",")).join(" "),fill:"#3e0f19",stroke:"#fff","stroke-width":f*.4}));
@@ -193,7 +196,7 @@ function vueCarte(){
   mk.addEventListener("pointerup",()=>{if(!mk.dataset.drag)return;delete mk.dataset.drag;if(mk.dataset.x){const px=+mk.dataset.x+ox,py=+mk.dataset.y+oy,n=256*Math.pow(2,z),lng=px/n*360-180,lat=Math.atan(Math.sinh(Math.PI*(1-2*py/n)))*180/Math.PI;S.moved.lat=lat;S.moved.lng=lng;vueCarte()}});}
  svg.append(sv("text",{x:W-4,y:H-5,"font-size":8*f*.85,"text-anchor":"end",fill:"#333",stroke:"#fff","stroke-width":f*.5,"paint-order":"stroke"},"© contributeurs OpenStreetMap"));
  el.append(h("div",{class:"carte"},h("h2",{text:"Carte des trajets"}),bar,zb,svg,
-  h("div",{class:"leg"},h("span",null,h("i",{class:"d1"}),"avec voiture"),h("span",null,h("i",{class:"d2"}),"sans voiture"),h("span",{text:"carré bleu : gare · cercle blanc cerclé : prise en charge · pointillé : absent ce jour"})),
+  h("div",{class:"leg"},h("span",null,h("i",{class:"d1"}),"rond : avec voiture"),h("span",null,h("i",{class:"d2 los"}),"losange : sans voiture"),h("span",{text:"carré bleu : gare · cercle blanc cerclé : prise en charge · pointillé : absent ce jour"})),
   h("p",{class:"doux",text:"Fond : OpenStreetMap (© contributeurs, ODbL), chargé depuis tile.openstreetmap.org. Tracés : itinéraire routier du conducteur vers le site, précalculé le "+(R?R.date:"?")+" (OSRM, sans trafic). Trajets à plusieurs : conducteur, prises en charge puis site, tracés sur les routes quand les tronçons sont précalculés, sinon en pointillé : "+tracesReelles+" trajet(s) tracé(s) sur "+ts.length+"."}),
   simBandeau("Domiciles inventés (calés sur la route la plus proche pour le calcul). Données OpenStreetMap libres (ODbL), mais le serveur public de tuiles est limité à un usage léger : pour un déploiement, tuiles auto-hébergées ou fournisseur dont les conditions conviennent. Important : en affichant la carte, votre navigateur envoie votre adresse IP et la zone affichée au serveur de tuiles OpenStreetMap. Ce sont des données réelles du visiteur, même si tous les profils sont inventés. Les tracés viennent d'un précalcul ponctuel sur le serveur de démonstration OSRM (sans garantie, ne convient pas à un produit). Détail dans SOURCES.md.")));
  el.querySelector(".carte").append(panneauDeplace());

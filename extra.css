@@ -41,7 +41,7 @@ p,li{font-size:.9rem}
 .champ-l .src{grid-column:1/-1;font-size:.72rem;color:var(--doux)}
 svg.carte-svg{width:100%;height:auto;background:rgba(255,250,243,.7);border:1px solid var(--bord);border-radius:16px}
 .leg{display:flex;flex-wrap:wrap;gap:10px;font-size:.75rem;color:var(--doux);margin-top:6px}
-.leg i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px}
+.leg i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px}.leg i.los{border-radius:0;transform:rotate(45deg);margin:0 6px 0 2px}
 .statuts li{margin:4px 0}
 .s-non{color:var(--alerte);font-weight:700}.s-fait{color:var(--ok);font-weight:700}.s-sim{color:#8a6a1a;font-weight:700}
 .verdict{font-weight:700}
