@@ -55,3 +55,16 @@ svg.carte-svg{width:100%;height:auto;background:rgba(255,250,243,.7);border:1px 
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 .barre-outils select{max-width:100%;box-sizing:border-box;min-height:44px}
+
+.semaine{display:grid;gap:8px;grid-template-columns:1fr}
+@media (min-width:700px){.semaine{grid-template-columns:1fr 1fr}}
+.case-sem{border:1px solid var(--bord);border-radius:14px;padding:10px 12px;background:#fffaf3}
+.case-tete{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:4px}
+.case-sem.e-conge{opacity:.7}
+.case-sem .rec{display:flex;gap:8px;align-items:center;margin:6px 0;min-height:44px}
+.case-sem .rec input{width:22px;height:22px}
+.case-sem .barre-outils button{min-height:44px}
+
+.liste-carte{padding-left:20px;margin:6px 0}.liste-carte li{margin:6px 0}details summary{min-height:44px;display:flex;align-items:center;cursor:pointer}
+
+.tab td.num{text-align:right;white-space:nowrap}

@@ -1,7 +1,7 @@
 (function(){
 "use strict";
 const D=window.TCDATA,E=window.TCENGINE;
-const S={p:E.defaults(),pop:E.population(28,2026),day:0,dir:"matin",avant:90,regleId:"capture",viewer:"dg",profil:"P01",scen:"conforme",res:null,bil:null,carteJour:0,carteDir:"matin"};
+const S={p:E.defaults(),pop:E.population(28,2026),day:0,dir:"matin",avant:90,regleId:"capture",viewer:"dg",profil:"P01",scen:"conforme",res:null,bil:null,carteJour:0,carteDir:"matin",recur:{},alea:null};
 const $=s=>document.querySelector(s);
 function h(tag,attrs,...kids){const e=document.createElement(tag);if(attrs)for(const k in attrs){if(k==="class")e.className=attrs[k];else if(k.startsWith("on"))e.addEventListener(k.slice(2),attrs[k]);else if(k==="text")e.textContent=attrs[k];else e.setAttribute(k,attrs[k])}
  kids.flat().forEach(c=>{if(c==null||c===false)return;e.append(c.nodeType?c:document.createTextNode(String(c)))});return e}
@@ -18,7 +18,8 @@ function recompute(){S.res=E.match(S.pop,S.p);S.bil=E.bilan(S.res.trips,S.p)}
 function simBandeau(t){return h("div",{class:"sim",role:"note"},t)}
 
 /* ---------- Décision ---------- */
-function vueDG(){
+function vueDG(){vueDG0();vueFin()}
+function vueDG0(){
  const el=$("#vue-dg");el.replaceChildren();
  const L=S.bil.L,p=S.p,w=p.semaines;
  const present=S.pop.length;
@@ -162,6 +163,8 @@ function vueCarte(){
   h("p",{class:"doux",text:"Fond : OpenStreetMap (© contributeurs, ODbL), chargé depuis tile.openstreetmap.org. Tracés : itinéraire routier du conducteur vers le site, précalculé le "+(R?R.date:"?")+" (OSRM, sans trafic). Trajets à plusieurs : conducteur, prises en charge puis site, tracés sur les routes quand les tronçons sont précalculés, sinon en pointillé : "+tracesReelles+" trajet(s) tracé(s) sur "+ts.length+"."}),
   simBandeau("Domiciles inventés (calés sur la route la plus proche pour le calcul). Données OpenStreetMap libres (ODbL), mais le serveur public de tuiles est limité à un usage léger : pour un déploiement, tuiles auto-hébergées ou fournisseur dont les conditions conviennent. Détail dans SOURCES.md.")));
  const i1=el.querySelector(".leg i.d1"),i2=el.querySelector(".leg i.d2");i1.style.background="#6b1d2c";i2.style.background="#b9802f";
+ const liste=h("ol",{class:"liste-carte"},ts.map(t=>h("li",null,h("b",{text:t.drv.nom}),(" conduit : "+t.ev.pts.slice(0,-1).length+" arrêt(s) avant le site, départ "+E.hm(t.ev.depart)+", arrivée "+E.hm(t.ev.arrive)+", "+f1(t.ev.km)+" km, détour "+f1(t.ev.detour)+" km. Passagers : "+t.pax.map(x=>x.nom+(x.mode==="gare"?" (gare "+x.gare.nom+")":" (domicile)")).join(", ")+"."))));
+ el.querySelector(".carte").append(h("details",{open:""},h("summary",{text:"Version texte de la carte ("+ts.length+" trajet(s))"}),ts.length?liste:h("p",{class:"doux",text:"Aucun trajet ce jour et ce sens."})));
 }
 
 /* ---------- Profil ---------- */
@@ -191,7 +194,73 @@ function vueProfil(){
   box.append(h("h3",{text:"Trajets proposés cette semaine : "+ts.length}));
   ts.forEach(t=>box.append(h("div",{class:"doux",text:E.JOURS[t.day]+" "+t.dir+" : "+(t.drv.id===x.id?"conducteur":"passager")+", départ "+E.hm(t.ev.depart)+", arrivée "+E.hm(t.ev.arrive)})));}
  mes();
- function refresh(){recompute();mes();vueDG();vueTrajets();vueCarte();vueControles()}
+ function refresh(){recompute();mes();vueDG();vueTrajets();vueCarte();vueControles();vueSemaine()}
+}
+
+
+function vueFin(){
+ const el=$("#vue-dg");
+ const sc=[["Faible",0.10],["Réglage actuel",S.p.coutKm],["Élevé",0.30],["Barème fiscal 2025, 5 CV (borne haute, pas un coût réel)",0.636]];
+ const rows=sc.map(([n,c])=>{const p=Object.assign({},S.p,{coutKm:c});const r=E.match(S.pop,p);const b=E.bilan(r.trips,p);const L=b.L;
+  return h("tr",null,h("td",{text:n+" ("+String(c).replace(".",",")+" €/km)"}),h("td",{class:"num",text:eur(L.dec.eurPax)}),h("td",{class:"num",text:eur(L.dec.eurDrv)}),h("td",{class:"num",text:eur(L.cor.eurPax)}),h("td",{class:"num",text:eur(L.cor.eurDrv)}))});
+ el.append(h("div",{class:"carte"},h("h2",{text:"Euros : sensibilité au coût par km (une semaine)"}),
+  h("p",{class:"doux",text:"Le coût au km est l'hypothèse la plus fragile du volet financier. Les euros sont une économie ou un surcoût pour les participants, pas de l'argent versé : aucun paiement n'existe dans cette démonstration. Le partage de frais reste borné par la règle de non-profit du conducteur (voir cadrage)."}),
+  h("table",{class:"tab"},h("thead",null,h("tr",null,["Hypothèse","Passagers, déclaré","Conducteurs, déclaré","Passagers, corroboré","Conducteurs, corroboré"].map(t=>h("th",{text:t})))),h("tbody",null,rows)),
+  h("p",{class:"doux",text:"Un montant négatif pour les passagers signifie qu'ils paient plus que leur alternative dans ce modèle. Lecture à confirmer avec la règle de partage de frais retenue par l'entreprise."})));
+}
+
+/* ---------- Ma semaine : une case par jour et par sens, états honnêtes, aléas simulés ---------- */
+const ALEAS=[
+ {k:"retard",l:"Je suis en retard de 10 min"},
+ {k:"annule",l:"Je ne peux pas faire ce trajet"},
+ {k:"cond",l:"Le conducteur annule"}];
+function etatCase(x,day,dir){
+ const j=x.jours[day];
+ if(!j.present)return {k:"conge",t:"Congé ou absent",d:"Aucun trajet à proposer ce jour."};
+ const t=S.res.trips.find(q=>q.day===day&&q.dir===dir&&(q.drv.id===x.id||q.pax.some(y=>y.id===x.id)));
+ if(!t)return {k:"seul",t:"Pas de trajet proposé",d:"Aucun partenaire compatible avec vos horaires, le détour maximal ou le temps en plus. Rien n'est réservé.",trip:null};
+ if(!t.accepte)return {k:"prop",t:"Proposition à accepter",d:"Rien n'est engagé tant que vous ne l'acceptez pas.",trip:t};
+ return {k:"conf",t:"Accepté dans cette simulation",d:"Présence et versement ne sont pas établis par cet état : voir niveaux déclaré et corroboré.",trip:t};
+}
+function alternative(x,day,dir,sansId){
+ const clone=JSON.parse(JSON.stringify(S.pop));
+ clone.forEach(q=>{if(q.id===sansId)q.jours[day].present=false});
+ const r=E.match(clone,S.p);
+ const t=r.trips.find(q=>q.day===day&&q.dir===dir&&(q.drv.id===x.id||q.pax.some(y=>y.id===x.id)));
+ return t||null;
+}
+function vueSemaine(){
+ const el=$("#vue-semaine");el.replaceChildren();
+ const x=byId(S.profil);
+ const sel=h("select",{"aria-label":"Profil",onchange:e=>{S.profil=e.target.value;S.alea=null;vueSemaine()}},S.pop.map(q=>h("option",{value:q.id,text:q.nom+" ("+q.role+")"})));sel.value=S.profil;
+ const grille=h("div",{class:"semaine",role:"list"});
+ E.JOURS.forEach((jn,day)=>["matin","soir"].forEach(dir=>{
+  const e=etatCase(x,day,dir),key=day+dir;
+  const rec=S.recur[x.id+key];
+  const ligne=h("div",{class:"case-sem e-"+e.k,role:"listitem"},
+   h("div",{class:"case-tete"},h("b",{text:jn+" "+(dir==="matin"?"matin":"soir")}),h("span",{class:"puce-etat",text:e.t})),
+   h("div",{class:"doux",text:e.d}));
+  if(e.trip){
+   const t=e.trip,role=t.drv.id===x.id?"conducteur":"passager";
+   ligne.append(h("div",null,"Vous êtes "+role+", départ "+E.hm(t.ev.depart)+", arrivée "+E.hm(t.ev.arrive)+", "+f1(t.ev.km)+" km."));
+   const cb=h("input",{type:"checkbox",id:"rec-"+key,onchange:ev=>{S.recur[x.id+key]=ev.target.checked;vueSemaine()}});cb.checked=!!rec;
+   ligne.append(h("label",{class:"rec",for:"rec-"+key},cb," Je demande à reproduire ce créneau chaque semaine"));
+   if(rec)ligne.append(h("div",{class:"doux",text:"Votre demande de récurrence est enregistrée dans cette simulation. Elle reste une demande : l'autre personne doit accepter, vous pouvez la retirer à tout moment, et aucun argent n'est engagé par ce choix."}));
+   const bar=h("div",{class:"barre-outils"});
+   ALEAS.forEach(a=>{if(a.k==="cond"&&role==="conducteur")return;bar.append(h("button",{type:"button",onclick:()=>{S.alea={key,k:a.k};vueSemaine()},text:a.l}))});
+   ligne.append(bar);
+   if(S.alea&&S.alea.key===key){
+    const a=S.alea.k;let msg;
+    if(a==="retard"){const extra=Math.max(...t.ev.extras.map(q=>q.extra));msg="Les autres participants sont prévenus du retard, sans annulation. Temps en plus déjà prévu pour un passager : "+f0(extra)+" min ; avec 10 min de retard, "+f0(extra+10)+" min pour un maximum fixé à "+S.p.maxExtraMin+" min"+(extra+10>S.p.maxExtraMin?" : le maximum serait dépassé, la décision de partir ou non revient aux personnes concernées.":" : le maximum reste respecté.")}
+    else if(a==="annule"){msg="Annulation enregistrée dans cette simulation. Aucun paiement n'existe ici. Les règles d'annulation tardive et d'absence restent à décider par l'entreprise ; elles ne sont pas inventées dans la démonstration."}
+    else{const alt=alternative(x,day,dir,t.drv.id);msg=alt?"Alternative trouvée par l'algorithme sans ce conducteur : départ "+E.hm(alt.ev.depart)+". C'est une proposition à accepter, pas une place garantie.":"Pas d'alternative proposée avec les profils présents ce jour. Aucun repli (taxi, prise en charge par l'entreprise) n'est promis : il faut une décision de l'entreprise."}
+    ligne.append(h("div",{class:"sim",role:"status",text:msg}));
+   }
+  }
+  grille.append(ligne)}));
+ el.append(h("div",{class:"carte"},h("h2",{text:"Ma semaine"}),
+  simBandeau("Simulation : la semaine est générée à l'avance à partir du profil, sans action de votre part. Rien n'est accepté, réservé ou payé à votre place."),
+  h("div",{class:"barre-outils"},sel),grille));
 }
 
 /* ---------- Contrôles anti-abus ---------- */
@@ -228,7 +297,7 @@ function champ(label,val,step,min,max,onch,src){
 function vueReglages(){
  const el=$("#vue-reglages");el.replaceChildren();
  const c=h("div",{class:"carte"},h("h2",{text:"Hypothèses et paramètres"}),h("p",{class:"doux",text:"Chaque valeur dit d'où elle vient. Une hypothèse de démonstration doit être remplacée par une mesure ou une source avant toute décision."}));
- D.PARAMS.forEach(x=>c.append(champ(x.l,S.p[x.k],x.step,x.min,x.max,v=>{S.p[x.k]=v;recompute();vueDG();vueTrajets();vueCarte();vueControles();vueProfil()},x.src)));
+ D.PARAMS.forEach(x=>c.append(champ(x.l,S.p[x.k],x.step,x.min,x.max,v=>{S.p[x.k]=v;recompute();vueDG();vueTrajets();vueCarte();vueControles();vueProfil();vueSemaine()},x.src)));
  c.append(h("div",{class:"barre-outils"},h("button",{onclick:()=>{S.p=E.defaults();recompute();all()},text:"Revenir aux valeurs initiales"})));
  el.append(c);
 }
@@ -252,7 +321,7 @@ function vueReel(){
   h("p",{class:"doux",text:"Sécurité de cette page : aucune requête externe, aucun cookie, aucune donnée saisie envoyée, politique de sécurité de contenu stricte. Détail dans SECURITE.md."})));
 }
 
-function all(){vueDG();vueTrajets();vueCarte();vueProfil();vueControles();vueReglages();vueReel()}
+function all(){vueSemaine();vueDG();vueTrajets();vueCarte();vueProfil();vueControles();vueReglages();vueReel()}
 document.querySelectorAll(".onglets button").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".onglets button").forEach(x=>x.classList.toggle("actif",x===b));document.querySelectorAll(".vue").forEach(v=>v.classList.toggle("actif",v.id==="vue-"+b.dataset.vue));window.scrollTo(0,0)}));
 recompute();all();
 const hv=(location.hash||"").slice(1);if(hv){const b=document.querySelector('.onglets button[data-vue="'+hv.replace(/[^a-z]/g,"")+'"]');if(b){b.click();const m=/-(\d+)$/.exec(location.hash);if(m&&hv.startsWith('carte')){S.carteSel=+m[1];vueCarte()}}}
