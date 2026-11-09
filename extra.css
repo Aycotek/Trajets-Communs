@@ -52,3 +52,5 @@ svg.carte-svg{width:100%;height:auto;background:rgba(255,250,243,.7);border:1px 
 .plage input[type=time]{width:112px}
 
 @media (max-width:640px){.onglets-large{flex-wrap:wrap;overflow:visible;border-radius:22px;position:static}.onglets-large button{flex:1 1 22%;padding:9px 6px}}
+
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}

@@ -1,5 +1,5 @@
 /* Tests du moteur : node tests.js. Vérifient les invariants, pas la réalité métier. */
-const assert=require("assert");require("./route-data.js");require("./data.js");const E=require("./engine.js");
+const assert=require("assert");require("./route-data.js");require("./route-legs.js");require("./data.js");const E=require("./engine.js");
 let n=0;const ok=(c,m)=>{assert(c,m);n++};
 const p=E.defaults(),pop=E.population(28,2026);
 ok(pop.length===28,"28 profils");
@@ -47,4 +47,9 @@ for(const seed of [2026,1,2,3,4,5]){
  ok(ra.trips.length>0&&rb.trips.length>0,"deux modes de calcul fonctionnent");
  const i=1,hv=E.hav({lat:R.pts[i][0],lng:R.pts[i][1]},{lat:R.pts[0][0],lng:R.pts[0][1]});
  ok(R.km[i][0]>=hv*0.99,"distance routière >= vol d'oiseau");}
+{const R=globalThis.TCROUTE,L=globalThis.TCLEGS,idx={};R.pts.forEach((q,i)=>{idx[q[0].toFixed(5)+","+q[1].toFixed(5)]=i});
+ const rr=E.match(E.population(28,2026),E.defaults());let manque=0;
+ rr.trips.forEach(t=>{for(let i=0;i<t.ev.pts.length-1;i++){const a=t.ev.pts[i],b=t.ev.pts[i+1];if(!L[idx[a.lat.toFixed(5)+","+a.lng.toFixed(5)]+">"+idx[b.lat.toFixed(5)+","+b.lng.toFixed(5)]])manque++}});
+ ok(manque===0,"tous les tronçons des trajets par défaut ont un tracé routier");
+ ok(E.defaults().ef===0.17,"facteur voiture Impact CO2");}
 console.log(n+" vérifications au total");
