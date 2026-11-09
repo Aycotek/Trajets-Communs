@@ -91,6 +91,36 @@ for(const seed of [2026,1,2,3,4,5]){
  ok(vus>=6,"cas de retrait exercés ("+vus+")");
  const base=E.match(E.population(28,2026),E.defaults());
  ok(E.match(E.population(28,2026),E.defaults(),undefined,{}).trips.length===base.trips.length,"sans retrait, même résultat");}
+/* Non-régression : un retrait ne touche que le trajet concerné ; tout le reste de la semaine est gelé */
+{let cas=0;const sig=(L)=>L.map(t=>E.tripKey(t)+"@"+t.ev.km.toFixed(4)).sort();
+ for(const seed of [2026,1,2,3,4,5,6,7]){
+  const pp=E.defaults(),po=E.population(28,seed),rr=E.match(po,pp);
+  for(const t of rr.trips.slice(0,12)){
+   for(const who of [t.drv,t.pax[0]]){
+    const out={};out[t.day+t.dir+"|"+who.id]=true;const r2=E.match(po,pp,undefined,out);cas++;
+    const autres=(L)=>L.filter(q=>!(q.day===t.day&&q.dir===t.dir));
+    ok(JSON.stringify(sig(autres(r2.trips)))===JSON.stringify(sig(autres(rr.trips))),"lundi annulé ne modifie aucun autre créneau de la semaine");
+    const memeCreneau=(L)=>L.filter(q=>q.day===t.day&&q.dir===t.dir&&q.drv.id!==t.drv.id&&!q.pax.some(y=>y.id===who.id));
+    const avant=memeCreneau(rr.trips).filter(q=>q.drv.id!==who.id&&!q.pax.some(y=>y.id===who.id));
+    const apres=r2.trips.filter(q=>q.day===t.day&&q.dir===t.dir);
+    ok(avant.filter(q=>q.drv.id!==t.drv.id).every(q=>apres.some(a=>E.tripKey(a)===E.tripKey(q))),"les autres trajets du même créneau, non concernés, restent identiques");
+   }}}
+ ok(cas>=100,"retraits exercés pour la non-régression ("+cas+")");}
+/* Départ ajouté tard : aucun trajet existant ne change */
+{let cas=0;
+ for(const seed of [2026,1,2,3,4,5]){
+  const pp=E.defaults(),po=E.population(28,seed),rr=E.match(po,pp);
+  const abs=[];po.forEach(x=>x.jours.forEach((j,d)=>{if(!j.present)abs.push([x,d])}));
+  for(const [x,d] of abs.slice(0,6))for(const dir of["matin","soir"]){
+   const out={};out[d+dir+"|"+x.id]="+";const r2=E.match(po,pp,undefined,out);cas++;
+   const k=L=>L.map(t=>E.tripKey(t)).sort().join(";");
+   const avant=rr.trips,apres=r2.trips;
+   ok(avant.every(t=>apres.some(q=>E.tripKey(q)===E.tripKey(t))),"ajout tardif : tous les trajets existants restent identiques");
+   const nouveaux=apres.filter(q=>!avant.some(t=>E.tripKey(t)===E.tripKey(q)));
+   ok(nouveaux.every(q=>[q.drv,...q.pax].some(y=>y.id===x.id)),"ajout tardif : un nouveau trajet contient forcément la personne ajoutée");
+   ok(nouveaux.every(q=>q.pax.length<=pp.places&&q.ev.detour<=pp.maxDetourKm+1e-6),"ajout tardif : capacité et détour respectés");
+  }}
+ ok(cas>=20,"ajouts tardifs exercés ("+cas+")");}
 /* Sensibilité financière : le coût au km agit linéairement sur les euros conducteurs */
 {const po=E.population(28,2026);let prev=-1,prevP=Infinity;
  for(const c of [0.10,0.20,0.30,0.636]){const q=Object.assign({},E.defaults(),{coutKm:c}),bb=E.bilan(E.match(po,q).trips,q);

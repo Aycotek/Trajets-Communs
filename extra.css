@@ -68,3 +68,5 @@ svg.carte-svg{width:100%;height:auto;background:rgba(255,250,243,.7);border:1px 
 .liste-carte{padding-left:20px;margin:6px 0}.liste-carte li{margin:6px 0}details summary{min-height:44px;display:flex;align-items:center;cursor:pointer}
 
 .tab td.num{text-align:right;white-space:nowrap}
+
+.case-sem details,.sim details{margin-top:4px}.case-sem details p,.sim details p{margin:4px 0}

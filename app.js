@@ -1,7 +1,7 @@
 (function(){
 "use strict";
 const D=window.TCDATA,E=window.TCENGINE;
-const S={p:E.defaults(),pop:E.population(28,2026),day:0,dir:"matin",avant:90,regleId:"capture",viewer:"dg",profil:"P01",scen:"conforme",res:null,bil:null,carteJour:0,carteDir:"matin",recur:{},alea:null};
+const S={p:E.defaults(),pop:E.population(28,2026),day:0,dir:"matin",avant:90,regleId:"capture",viewer:"dg",profil:"P01",scen:"conforme",res:null,bil:null,carteJour:0,carteDir:"matin",recur:{},alea:null,carteDz:0,moved:null};
 const $=s=>document.querySelector(s);
 function h(tag,attrs,...kids){const e=document.createElement(tag);if(attrs)for(const k in attrs){if(k==="class")e.className=attrs[k];else if(k.startsWith("on"))e.addEventListener(k.slice(2),attrs[k]);else if(k==="text")e.textContent=attrs[k];else e.setAttribute(k,attrs[k])}
  kids.flat().forEach(c=>{if(c==null||c===false)return;e.append(c.nodeType?c:document.createTextNode(String(c)))});return e}
@@ -119,26 +119,48 @@ function carteTrajet(t){
 
 /* ---------- Carte : fond OpenStreetMap + tracés routiers précalculés ---------- */
 function mer(lat,lng,z){const n=256*Math.pow(2,z),r=Math.PI/180;return {x:(lng+180)/360*n,y:(1-Math.log(Math.tan(lat*r)+1/Math.cos(lat*r))/Math.PI)/2*n}}
+function deplacer(dn,de,focus){const m=S.moved;if(!m)return;m.lat+=dn*0.0018;m.lng+=de*0.0018/Math.cos(m.lat*Math.PI/180);vueCarte();if(focus){const n=document.getElementById(focus);if(n)n.focus()}}
+function panneauDeplace(){
+ const sel=h("select",{id:"dep-qui","aria-label":"Personne dont on déplace le point de départ",onchange:e=>{S.moved=e.target.value?{id:e.target.value,lat:byId(e.target.value).home.lat,lng:byId(e.target.value).home.lng}:null;vueCarte();document.getElementById("dep-qui").focus()}},h("option",{value:"",text:"Choisir une personne fictive"}),...S.pop.map(q=>h("option",{value:q.id,text:q.nom})));
+ sel.value=S.moved?S.moved.id:"";
+ const d=h("details",{open:S.moved?"":null},h("summary",{text:"Tester un point de départ déplacé"}),sel);
+ if(S.moved){
+  const mo=byId(S.moved.id),km=E.hav({lat:S.moved.lat,lng:S.moved.lng},D.SITE);
+  d.append(h("div",{class:"barre-outils",role:"group","aria-label":"Déplacer le point de 200 mètres"},
+   h("button",{type:"button",onclick:()=>deplacer(1,0,"dep-n"),id:"dep-n",text:"Nord"}),h("button",{type:"button",onclick:()=>deplacer(-1,0,"dep-s"),id:"dep-s",text:"Sud"}),
+   h("button",{type:"button",onclick:()=>deplacer(0,-1,"dep-o"),id:"dep-o",text:"Ouest"}),h("button",{type:"button",onclick:()=>deplacer(0,1,"dep-e"),id:"dep-e",text:"Est"}),
+   h("button",{type:"button",onclick:()=>{S.moved=null;vueCarte();document.getElementById("dep-qui").focus()},text:"Remettre en place"})));
+  d.append(h("p",{role:"status",class:"sim",text:"Point déplacé de "+mo.nom+" : itinéraire, durée et prise en charge non calculés. Les routes précalculées ne couvrent que les points d'origine et ne sont pas réutilisées pour ce nouveau point. Distance à vol d'oiseau jusqu'au site : "+f1(km)+" km, à titre indicatif. Les trajets et les bilans ne changent pas."}));
+ }else d.append(h("p",{class:"doux",text:"Le point déplacé n'est pas routé : la démonstration n'a pas de moteur de routage en ligne, et le serveur public d'itinéraires n'est pas utilisé."}));
+ return d;
+}
 function vueCarte(){
  const el=$("#vue-carte");el.replaceChildren();
  const bar=h("div",{class:"barre-outils"});
- E.JOURS.forEach((j,i)=>bar.append(h("button",{class:i===S.carteJour?"actif":"",onclick:()=>{S.carteJour=i;S.carteSel=null;vueCarte()},text:j})));
- ["matin","soir"].forEach(d=>bar.append(h("button",{class:d===S.carteDir?"actif":"",onclick:()=>{S.carteDir=d;S.carteSel=null;vueCarte()},text:d==="matin"?"Matin":"Soir"})));
+ E.JOURS.forEach((j,i)=>bar.append(h("button",{class:i===S.carteJour?"actif":"",onclick:()=>{S.carteJour=i;S.carteSel=null;S.carteDz=0;vueCarte()},text:j})));
+ ["matin","soir"].forEach(d=>bar.append(h("button",{class:d===S.carteDir?"actif":"",onclick:()=>{S.carteDir=d;S.carteSel=null;S.carteDz=0;vueCarte()},text:d==="matin"?"Matin":"Soir"})));
  const tsAll=S.res.trips.filter(t=>t.day===S.carteJour&&t.dir===S.carteDir);
  const sel=S.carteSel!=null&&tsAll[S.carteSel]?tsAll[S.carteSel]:null;
- const choix=h("select",{"aria-label":"Choisir un trajet à agrandir",onchange:e=>{S.carteSel=e.target.value===""?null:+e.target.value;vueCarte()}},h("option",{value:"",text:"Tous les trajets"}),...tsAll.map((t,i)=>h("option",{value:String(i),text:"Zoom : "+t.drv.nom.replace("Profil ","")+" + "+t.pax.length+" passager(s), "+E.hm(t.ev.depart)+"-"+E.hm(t.ev.arrive)})));
+ const choix=h("select",{"aria-label":"Choisir un trajet à agrandir",onchange:e=>{S.carteSel=e.target.value===""?null:+e.target.value;S.carteDz=0;vueCarte()}},h("option",{value:"",text:"Tous les trajets"}),...tsAll.map((t,i)=>h("option",{value:String(i),text:"Zoom : "+t.drv.nom.replace("Profil ","")+" + "+t.pax.length+" passager(s), "+E.hm(t.ev.depart)+"-"+E.hm(t.ev.arrive)})));
  choix.value=sel?String(S.carteSel):"";bar.append(choix);
+ const zb=h("div",{class:"barre-outils",role:"group","aria-label":"Zoom de la carte"},
+  h("button",{type:"button",id:"z-plus",...((S.carteDz||0)>=3?{disabled:true}:{}),"aria-label":"Zoom avant",onclick:()=>{S.carteDz=(S.carteDz||0)+1;vueCarte();document.getElementById("z-plus").focus()},text:"Zoom +"}),
+  h("button",{type:"button",id:"z-moins",...((S.carteDz||0)<=-1?{disabled:true}:{}),"aria-label":"Zoom arrière",onclick:()=>{S.carteDz=(S.carteDz||0)-1;vueCarte();document.getElementById("z-moins").focus()},text:"Zoom −"}),
+  h("button",{type:"button",id:"z-reset","aria-label":"Vue d'ensemble",onclick:()=>{S.carteDz=0;vueCarte();document.getElementById("z-reset").focus()},text:"Vue d'ensemble"}));
  const all=sel?[...sel.ev.pts]:[D.SITE,...S.pop.map(x=>x.home)];
+ if(S.moved)all.push(S.moved,byId(S.moved.id).home);
  const la=all.map(q=>q.lat),lo=all.map(q=>q.lng);
  const box={a:Math.min(...la)-.006,b:Math.max(...la)+.006,c:Math.min(...lo)-.01,d:Math.max(...lo)+.01};
  let z=14,tl,br,nx,ny;
  for(;z>=9;z--){tl=mer(box.b,box.c,z);br=mer(box.a,box.d,z);nx=Math.floor(br.x/256)-Math.floor(tl.x/256)+1;ny=Math.floor(br.y/256)-Math.floor(tl.y/256)+1;if(nx*ny<=16)break}
- const ox=Math.floor(tl.x/256)*256,oy=Math.floor(tl.y/256)*256,W=nx*256,H=ny*256;
+ const dz=Math.max(-1,Math.min(3,S.carteDz||0));
+ let ox=Math.floor(tl.x/256)*256,oy=Math.floor(tl.y/256)*256,W=nx*256,H=ny*256,vb=null,Wv=W;
+ if(dz!==0){const zn=Math.max(9,Math.min(17,z+dz)),cm=mer((box.a+box.b)/2,(box.c+box.d)/2,zn);z=zn;ox=Math.floor((cm.x-384)/256)*256;oy=Math.floor((cm.y-384)/256)*256;nx=4;ny=4;W=1024;H=1024;Wv=768;vb=[cm.x-ox-384,cm.y-oy-384,768,768].map(v=>v.toFixed(1)).join(" ")}
  const P=q=>{const m=mer(q.lat,q.lng,z);return {x:m.x-ox,y:m.y-oy}};
- const f=W/420;
- const svg=sv("svg",{class:"carte-svg",viewBox:"0 0 "+W+" "+H,role:"img","aria-label":"Carte OpenStreetMap avec domiciles fictifs, gares, site d'arrivée et tracés routiers"});
+ const f=Wv/420;
+ const svg=sv("svg",{class:"carte-svg",viewBox:vb||("0 0 "+W+" "+H),role:"img","aria-label":"Carte OpenStreetMap avec domiciles fictifs, gares, site d'arrivée et tracés routiers"});
  svg.append(sv("rect",{x:0,y:0,width:W,height:H,fill:"#efe6d6"}));
- const tx0=Math.floor(tl.x/256),ty0=Math.floor(tl.y/256);
+ const tx0=ox/256,ty0=oy/256;
  for(let i=0;i<nx;i++)for(let j=0;j<ny;j++)svg.append(sv("image",{href:"https://tile.openstreetmap.org/"+z+"/"+(tx0+i)+"/"+(ty0+j)+".png",x:i*256,y:j*256,width:256,height:256,opacity:".92"}));
  const R=window.TCROUTE,idx={};if(R)R.pts.forEach((q,i)=>{idx[q[0].toFixed(5)+","+q[1].toFixed(5)]=i});
  const kk=q=>q.lat.toFixed(5)+","+q.lng.toFixed(5);
@@ -161,11 +183,20 @@ function vueCarte(){
  const s0=P(D.SITE),r0=9*f*.85;
  svg.append(sv("polygon",{points:[[s0.x,s0.y-r0*1.6],[s0.x+r0*1.4,s0.y+r0],[s0.x-r0*1.4,s0.y+r0]].map(q=>q.join(",")).join(" "),fill:"#3e0f19",stroke:"#fff","stroke-width":f*.4}));
  svg.append(sv("text",{x:s0.x+r0*1.8,y:s0.y-r0*.5,"font-size":13*f*.85,"font-weight":"700",fill:"#3e0f19",stroke:"#fff","stroke-width":f,"paint-order":"stroke"},"Site d'arrivée"));
+ if(S.moved){const mo=byId(S.moved.id),a0=P(mo.home),a1=P(S.moved);
+  svg.append(sv("line",{x1:a0.x,y1:a0.y,x2:a1.x,y2:a1.y,stroke:"#3e0f19","stroke-width":f*.5,"stroke-dasharray":"3 3"}));
+  const mk=sv("circle",{cx:a1.x,cy:a1.y,r:9*f*.85,fill:"#fff","fill-opacity":".6",stroke:"#3e0f19","stroke-width":f*.7,"stroke-dasharray":"4 3",id:"pt-deplace",style:"touch-action:none;cursor:grab",tabindex:"0",role:"button","aria-label":"Point déplacé, flèches du clavier pour le bouger de 200 mètres"});
+  svg.append(mk);svg.append(sv("text",{x:a1.x+12*f*.85,y:a1.y+4,"font-size":11*f*.85,fill:"#3e0f19",stroke:"#fff","stroke-width":f*.8,"paint-order":"stroke"},"non calculé"));
+  mk.addEventListener("keydown",ev=>{const d={ArrowUp:[1,0],ArrowDown:[-1,0],ArrowLeft:[0,-1],ArrowRight:[0,1]}[ev.key];if(d){ev.preventDefault();deplacer(d[0],d[1],"pt-deplace")}});
+  mk.addEventListener("pointerdown",ev=>{mk.setPointerCapture(ev.pointerId);mk.dataset.drag="1"});
+  mk.addEventListener("pointermove",ev=>{if(!mk.dataset.drag)return;const m=svg.getScreenCTM().inverse(),pt=svg.createSVGPoint();pt.x=ev.clientX;pt.y=ev.clientY;const q=pt.matrixTransform(m);mk.setAttribute("cx",q.x);mk.setAttribute("cy",q.y);mk.dataset.x=q.x;mk.dataset.y=q.y});
+  mk.addEventListener("pointerup",()=>{if(!mk.dataset.drag)return;delete mk.dataset.drag;if(mk.dataset.x){const px=+mk.dataset.x+ox,py=+mk.dataset.y+oy,n=256*Math.pow(2,z),lng=px/n*360-180,lat=Math.atan(Math.sinh(Math.PI*(1-2*py/n)))*180/Math.PI;S.moved.lat=lat;S.moved.lng=lng;vueCarte()}});}
  svg.append(sv("text",{x:W-4,y:H-5,"font-size":8*f*.85,"text-anchor":"end",fill:"#333",stroke:"#fff","stroke-width":f*.5,"paint-order":"stroke"},"© contributeurs OpenStreetMap"));
- el.append(h("div",{class:"carte"},h("h2",{text:"Carte des trajets"}),bar,svg,
+ el.append(h("div",{class:"carte"},h("h2",{text:"Carte des trajets"}),bar,zb,svg,
   h("div",{class:"leg"},h("span",null,h("i",{class:"d1"}),"avec voiture"),h("span",null,h("i",{class:"d2"}),"sans voiture"),h("span",{text:"carré bleu : gare · cercle blanc cerclé : prise en charge · pointillé : absent ce jour"})),
   h("p",{class:"doux",text:"Fond : OpenStreetMap (© contributeurs, ODbL), chargé depuis tile.openstreetmap.org. Tracés : itinéraire routier du conducteur vers le site, précalculé le "+(R?R.date:"?")+" (OSRM, sans trafic). Trajets à plusieurs : conducteur, prises en charge puis site, tracés sur les routes quand les tronçons sont précalculés, sinon en pointillé : "+tracesReelles+" trajet(s) tracé(s) sur "+ts.length+"."}),
   simBandeau("Domiciles inventés (calés sur la route la plus proche pour le calcul). Données OpenStreetMap libres (ODbL), mais le serveur public de tuiles est limité à un usage léger : pour un déploiement, tuiles auto-hébergées ou fournisseur dont les conditions conviennent. Détail dans SOURCES.md.")));
+ el.querySelector(".carte").append(panneauDeplace());
  const i1=el.querySelector(".leg i.d1"),i2=el.querySelector(".leg i.d2");i1.style.background="#6b1d2c";i2.style.background="#b9802f";
  const liste=h("ol",{class:"liste-carte"},ts.map(t=>h("li",null,h("b",{text:t.drv.nom}),(" conduit : "+t.ev.pts.slice(0,-1).length+" arrêt(s) avant le site, départ "+E.hm(t.ev.depart)+", arrivée "+E.hm(t.ev.arrive)+", "+f1(t.ev.km)+" km, détour "+f1(t.ev.detour)+" km. Passagers : "+t.pax.map(x=>x.nom+(x.mode==="gare"?" (gare "+x.gare.nom+")":" (domicile)")).join(", ")+"."))));
  el.querySelector(".carte").append(h("details",{open:""},h("summary",{text:"Version texte de la carte ("+ts.length+" trajet(s))"}),ts.length?liste:h("p",{class:"doux",text:"Aucun trajet ce jour et ce sens."})));
@@ -219,11 +250,11 @@ function apres(focus){saveSim();S.alea=null;refreshAll();if(focus){const n=docum
 function accepter(t,ids,focus){ids.forEach(id=>{S.dec[E.tripKey(t)+"#"+id]="accepte"});apres(focus)}
 function retirer(day,dir,uid,val,focus){S.out[slotK(day,dir,uid)]=val;delete S.recur[uid+day+dir];apres(focus)}
 function rétablir(day,dir,uid,focus){delete S.out[slotK(day,dir,uid)];apres(focus)}
-function retraitsAutres(day,dir,uid){return S.pop.filter(q=>q.id!==uid&&S.out[slotK(day,dir,q.id)])}
+function retraitsAutres(day,dir,uid){return S.pop.filter(q=>q.id!==uid&&S.out[slotK(day,dir,q.id)]&&S.out[slotK(day,dir,q.id)]!=="+")}
 function etatCase(x,day,dir){
  const j=x.jours[day];
- if(!j.present)return {k:"conge",t:"Congé ou absent",d:"Aucun trajet à proposer ce jour."};
- const mo=S.out[slotK(day,dir,x.id)];
+ if(!j.present&&!S.out[slotK(day,dir,x.id)])return {k:"conge",t:"Congé ou absent",d:"Aucun trajet à proposer ce jour."};
+ const mo0=S.out[slotK(day,dir,x.id)],mo=mo0==="+"?null:mo0,ajoute=mo0==="+";
  if(mo)return {k:"refus",t:mo==="refuse"?"Refusé par vous":"Annulé par vous",d:"Vous êtes retiré de ce créneau : le trajet est recalculé sans vous, capacité, détour et bilans compris. Vous pouvez revenir sur ce choix.",trip:null,mo};
  const t=S.res.trips.find(q=>q.day===day&&q.dir===dir&&(q.drv.id===x.id||q.pax.some(y=>y.id===x.id)));
  if(!t)return {k:"seul",t:"Pas de trajet proposé",d:"Aucun partenaire compatible avec vos horaires, le détour maximal ou le temps en plus. Rien n'est réservé. Aucun repli (taxi, prise en charge par l'entreprise) n'est promis.",trip:null};
@@ -232,6 +263,7 @@ function etatCase(x,day,dir){
  if(t.accepte)return {k:"conf",t:"Confirmé (autres participants simulés)",d:"Vous avez accepté et les autres acceptations sont simulées. Avec de vrais utilisateurs, chacun devrait accepter. Cet état n'établit ni présence ni droit à un paiement.",trip:t};
  return {k:"att",t:"Accepté par vous, en attente des autres",d:"Votre acceptation seule ne confirme rien : les autres participants (simulés) n'ont pas accepté. Le trajet n'est pas compté dans les bilans.",trip:t};
 }
+function cav(court,detail,cls){return h("div",{class:cls||"doux"},court,detail?h("details",null,h("summary",{text:"Détails"}),h("p",{text:detail})):null)}
 function vueSemaine(){
  const el=$("#vue-semaine");el.replaceChildren();
  const x=byId(S.profil);
@@ -241,12 +273,16 @@ function vueSemaine(){
   const e=etatCase(x,day,dir),key=day+dir,idb="b-"+key;
   const ligne=h("div",{class:"case-sem e-"+e.k,role:"listitem"},
    h("div",{class:"case-tete"},h("b",{text:jn+" "+(dir==="matin"?"matin":"soir")}),h("span",{class:"puce-etat",text:e.t})),
-   h("div",{class:"doux",text:e.d}));
+   (()=>{const k=e.d.indexOf(". ");return k>0&&k<e.d.length-2?cav(e.d.slice(0,k+1),e.d.slice(k+2)):h("div",{class:"doux",text:e.d})})());
   const bar=h("div",{class:"barre-outils"});
   const t=e.trip;
   const autres=retraitsAutres(day,dir,x.id);
-  if(autres.length)ligne.append(h("div",{class:"sim",role:"status",text:"Retrait simulé de "+autres.length+" participant(s) fictif(s) sur ce créneau : tous les trajets du créneau ont été recalculés (capacité, détour, temps en plus, bilans). Les accords précédents ne sont pas reportés sur un trajet aux participants différents."}));
+  if(autres.length)ligne.append(cav("Retrait simulé de "+autres.length+" participant(s) fictif(s) : seuls les trajets concernés sont recalculés, le reste de la semaine ne bouge pas.","Capacité, détour, temps en plus et bilans sont recalculés pour ces trajets. Un trajet dont les participants, l'heure ou le point de prise en charge changent demande un nouvel accord : l'ancien n'est pas reporté.","sim"));
   if(autres.length)bar.append(h("button",{type:"button",id:idb+"-rest",onclick:()=>{autres.forEach(q=>delete S.out[slotK(day,dir,q.id)]);apres(idb+"-rest")},text:"Rétablir les participants simulés"}));
+  const aj=S.out[slotK(day,dir,x.id)]==="+";
+  if(e.k==="conge")bar.append(h("button",{type:"button",id:idb+"-add",onclick:()=>{S.out[slotK(day,dir,x.id)]="+";apres(idb+"-add")},text:"Ajouter un départ tard pour ce créneau"}));
+  if(aj){ligne.append(cav("Départ ajouté tard : seuls de nouveaux trajets avec des personnes sans trajet sont cherchés.","Aucun trajet existant, confirmé ou non, ne change de composition, d'heure ou de point de prise en charge. Si rien ne convient, il n'y a pas de trajet : aucun repli n'est promis.","sim"));bar.append(h("button",{type:"button",id:idb+"-add",onclick:()=>{delete S.out[slotK(day,dir,x.id)];apres(idb+"-add")},text:"Annuler cet ajout"}))}
+  if(dir==="soir"&&(e.k==="refus"||e.k==="seul")&&etatCase(x,day,"matin").k==="conf")ligne.append(h("div",{class:"sim",role:"status",text:"Votre aller du matin est confirmé mais ce retour n'est pas assuré. Aucun retour garanti : ni taxi ni prise en charge par l'entreprise n'est promis."}));
   if(e.k==="refus")bar.append(h("button",{type:"button",id:idb+"-ann",onclick:()=>rétablir(day,dir,x.id,idb+"-acc"),text:"Revenir sur ma décision"}));
   if(t){
    const role=t.drv.id===x.id?"conducteur":"passager",rk=E.tripKey(t)+"#"+x.id;
@@ -268,16 +304,18 @@ function vueSemaine(){
     const rec=S.recur[x.id+key];
     const cb=h("input",{type:"checkbox",id:"rec-"+key,onchange:ev=>{if(ev.target.checked)S.recur[x.id+key]=true;else delete S.recur[x.id+key];saveSim();vueSemaine();const n=document.getElementById("rec-"+key);if(n)n.focus()}});cb.checked=!!rec;
     ligne.append(h("label",{class:"rec",for:"rec-"+key},cb," Je demande à reproduire ce créneau chaque semaine"));
-    if(rec)ligne.append(h("div",{class:"doux",text:"Demande de récurrence enregistrée pour la session de démonstration seulement : elle disparaît à la fermeture de l'onglet, n'est pas durable et n'engage personne. Dans un vrai produit, l'autre personne devrait accepter. Vous la retirez en décochant ; aucun argent n'est engagé."}));
-    bar.append(h("button",{type:"button",onclick:()=>{S.alea=S.alea&&S.alea.key===key?null:{key,k:"retard"};vueSemaine()},text:"Je suis en retard de 10 min"}),h("button",{type:"button",id:idb+"-ret",onclick:()=>retirer(day,dir,x.id,"annule",idb+"-ann"),text:"Je ne peux plus faire ce trajet"}));
-    if(S.alea&&S.alea.key===key){const extra=Math.max(...t.ev.extras.map(q=>q.extra));
+    if(rec)ligne.append(cav("Demande valable pour cette session de démonstration seulement, non durable, sans engagement.","Elle disparaît à la fermeture de l'onglet. Dans un vrai produit, l'autre personne devrait accepter. Vous la retirez en décochant ; aucun argent n'est engagé."));
+    if(role==="conducteur")bar.append(h("button",{type:"button",onclick:()=>{S.alea=S.alea&&S.alea.key===key&&S.alea.k==="absent"?null:{key,k:"absent"};vueSemaine()},text:"Simuler : un passager est absent"}));
+    bar.append(h("button",{type:"button",onclick:()=>{S.alea=S.alea&&S.alea.key===key&&S.alea.k==="retard"?null:{key,k:"retard"};vueSemaine()},text:"Je suis en retard de 10 min"}),h("button",{type:"button",id:idb+"-ret",onclick:()=>retirer(day,dir,x.id,"annule",idb+"-ann"),text:"Je ne peux plus faire ce trajet"}));
+    if(S.alea&&S.alea.key===key&&S.alea.k==="absent")ligne.append(h("div",{class:"sim",role:"status",text:"Absence simulée d'un passager au point de prise en charge. Elle ne prouve pas sa faute et n'ouvre aucun droit à un paiement ou une pénalité dans cette démonstration. Le trajet reste compté comme confirmé : un vrai produit demande une règle (délai d'attente, preuve contraire) fixée par l'entreprise, et la corroboration de ce trajet serait à vérifier."}));
+    if(S.alea&&S.alea.key===key&&S.alea.k==="retard"){const extra=Math.max(...t.ev.extras.map(q=>q.extra));
      ligne.append(h("div",{class:"sim",role:"status",text:"Retard simulé : aucun message réel n'est envoyé et personne n'est prévenu. Le trajet n'est pas annulé. Temps en plus déjà prévu pour un passager : "+f0(extra)+" min ; avec 10 min de retard, "+f0(extra+10)+" min pour un maximum fixé à "+S.p.maxExtraMin+" min"+(extra+10>S.p.maxExtraMin?" : le maximum serait dépassé, la décision de partir ou non reviendrait aux personnes concernées.":" : le maximum reste respecté.")}))}
    }
   }
   if(bar.children.length)ligne.append(bar);
   grille.append(ligne)}));
  el.append(h("div",{class:"carte"},h("h2",{text:"Ma semaine"}),
-  simBandeau("Simulation : la semaine est proposée à l'avance à partir du profil. Rien n'est accepté, réservé ou payé à votre place : vous acceptez ou refusez chaque trajet. Les autres participants sont fictifs et simulés, aucun message réel n'est envoyé. Vos choix ne sont gardés que dans cet onglet (sessionStorage)."),
+  h("div",{class:"sim",role:"note"},"Démonstration : rien n'est accepté, réservé ni payé à votre place. Les autres participants sont fictifs et simulés, aucun message réel n'est envoyé.",h("details",null,h("summary",{text:"Détails"}),h("p",{text:"La semaine est proposée à l'avance à partir du profil ; vous acceptez ou refusez chaque trajet. Vos choix ne sont gardés que dans cet onglet (sessionStorage), rien n'est durable."}))),
   h("div",{class:"barre-outils"},sel,h("button",{type:"button",onclick:()=>{S.dec={};S.recur={};S.out={};saveSim();S.alea=null;refreshAll()},text:"Effacer mes choix simulés"})),grille));
 }
 

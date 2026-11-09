@@ -96,12 +96,27 @@ function metrics(c,drv,g){
 
 /* Appariement "chacun son tour" : à chaque tour, un conducteur propose le meilleur ajout ; on boucle jusqu'à stabilité. */
 E.match=function(pop,p,state,out){
- const c=ctx(p);const driven={};pop.forEach(x=>driven[x.id]=0);
- const trips=[];let id=0;
- for(let day=0;day<5;day++){
-  for(const dir of["matin","soir"]){
-   const present=pop.filter(x=>x.jours[day].present&&!(out&&out[day+dir+"|"+x.id]));
-   const taken=new Set();const groups=[];
+ const c=ctx(p);
+ const hasOut=out&&Object.keys(out).some(k=>out[k]);
+ if(!hasOut)return base();
+ /* out[créneau|id]=true ou "refus" : retrait ; "+" : ajout tardif. Seuls les trajets concernés sont recalculés ; le reste de la semaine et les trajets non concernés restent identiques à la proposition initiale.
+    Un ajout tardif n'entre que dans de nouveaux trajets avec des personnes sans trajet : aucun trajet existant ne change de composition. */
+ const b=base();const trips=[];
+ for(let day=0;day<5;day++)for(const dir of["matin","soir"]){
+  const bt=b.trips.filter(t=>t.day===day&&t.dir===dir);
+  const gone=new Set(pop.filter(x=>out[day+dir+"|"+x.id]&&out[day+dir+"|"+x.id]!=="+").map(x=>x.id));
+  const added=pop.filter(x=>out[day+dir+"|"+x.id]==="+"&&!x.jours[day].present&&!gone.has(x.id));
+  if(!gone.size&&!added.length){trips.push(...bt);continue}
+  const hit=bt.filter(t=>gone.has(t.drv.id)||t.pax.some(y=>gone.has(y.id)));
+  const keep=bt.filter(t=>!hit.includes(t));trips.push(...keep);
+  const used=new Set();keep.forEach(t=>{used.add(t.drv.id);t.pax.forEach(y=>used.add(y.id))});
+  const pool=[...pop.filter(x=>x.jours[day].present&&!gone.has(x.id)&&!used.has(x.id)),...added.map(x=>x)];
+  const dr=Object.assign({},b.snap[day+dir]);
+  let n=0;solve(day,dir,pool,dr).forEach(g=>{g.id="R"+day+dir+(++n);trips.push(g)});
+ }
+ return {trips,driven:b.driven};
+ function solve(day,dir,present,driven){
+   const res=[];const taken=new Set();
    const owners=present.filter(x=>x.aVoiture).sort((a,b)=>(driven[a.id]-driven[b.id])||a.id.localeCompare(b.id));
    const grp=new Map();
    let changed=true,rounds=0;
@@ -129,11 +144,19 @@ E.match=function(pop,p,state,out){
    grp.forEach(gv=>{if(gv.pax.length){
     const ev=gv.ev;const m=metrics(c,gv.drv,{...ev,order:ev.order});
     driven[gv.drv.id]++;
-    trips.push({id:"T"+(++id),day,dir,drv:gv.drv,pax:ev.order,ev,m});
+    res.push({id:null,day,dir,drv:gv.drv,pax:ev.order,ev,m});
    }});
-  }
+   return res;
  }
- return {trips,driven};
+ function base(){
+  const driven={};pop.forEach(x=>driven[x.id]=0);const snap={};
+  const trips=[];let id=0;
+  for(let day=0;day<5;day++)for(const dir of["matin","soir"]){
+   snap[day+dir]=Object.assign({},driven);
+   solve(day,dir,pop.filter(x=>x.jours[day].present),driven).forEach(g=>{g.id="T"+(++id);trips.push(g)});
+  }
+  return {trips,driven,snap};
+ }
 };
 
 /* Règles de contrôle sur une trace de TEST (métriques synthétiques, pas de positions réelles). */
@@ -165,7 +188,7 @@ E.scenarioMix=function(okRate,R){
 };
 
 /* Bilan à trois niveaux : potentiel (propositions), déclaré (acceptées), corroboré (traces de test conformes). */
-E.tripKey=function(t){return t.day+t.dir+"|"+t.drv.id+"|"+t.pax.map(x=>x.id).sort().join(",")};
+E.tripKey=function(t){return t.day+t.dir+"|"+t.drv.id+"|"+t.pax.map(x=>x.id).sort().join(",")+"|"+Math.round(t.ev.depart)};
 /* Consentements : over[clé|id]="accepte" = consentement explicite d'un participant. Sans aucune décision explicite, le tirage de population décide.
    Dès qu'un participant a décidé, le trajet n'est confirmé que si CHAQUE participant a accepté ; ceux qui n'ont rien décidé sont simulés par le tirage (t.simAccepte).
    Les retraits (refus, annulation) ne passent pas par ici : ils retirent la personne du créneau et le trajet est recalculé (E.match, paramètre out). */
