@@ -18,7 +18,7 @@ Connexion avec un compte professionnel, notifications Teams, comptes persistants
 ## Utiliser
 Ouvrir `index.html` via un serveur statique (par exemple `python3 -m http.server`) ou la page GitHub Pages du dépôt. Aucune dépendance, aucun appel réseau.
 
-Sources et réserves : `SOURCES.md`. Sécurité : `SECURITE.md`.
+Sources et réserves : `SOURCES.md`. Sécurité : `SECURITE.md`. Bilan démo vs production et décisions restantes : `BILAN.md`. Tests automatiques à chaque push : `.github/workflows/tests.yml` (statut seul, sans bloquer la publication Pages).
 
 ## Questions ouvertes
 Voir QUESTIONS.md : six risques de fond (retour non assuré, rendez-vous, batterie et réseau, refus et confidentialité, équité, responsabilité) et les décisions qui restent à l'entreprise. Tests : node tests.js (moteur) et tests-ui.html (parcours dans un navigateur).
