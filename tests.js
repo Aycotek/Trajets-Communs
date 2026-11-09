@@ -52,4 +52,28 @@ for(const seed of [2026,1,2,3,4,5]){
  rr.trips.forEach(t=>{for(let i=0;i<t.ev.pts.length-1;i++){const a=t.ev.pts[i],b=t.ev.pts[i+1];if(!L[idx[a.lat.toFixed(5)+","+a.lng.toFixed(5)]+">"+idx[b.lat.toFixed(5)+","+b.lng.toFixed(5)]])manque++}});
  ok(manque===0,"tous les tronçons des trajets par défaut ont un tracé routier");
  ok(E.defaults().ef===0.17,"facteur voiture Impact CO2");}
+/* Décisions de l'utilisateur et effets croisés */
+{const pp=E.defaults(),po=E.population(28,2026),rr=E.match(po,pp),b0=E.bilan(rr.trips,pp);
+ const prop=rr.trips.find(t=>!t.accepte),acc=rr.trips.find(t=>t.accepte);
+ ok(prop&&acc,"un trajet proposé non accepté et un accepté existent");
+ let over={};over[E.tripKey(prop)+"#"+prop.pax[0].id]="accepte";
+ const b1=E.bilan(rr.trips,pp,undefined,over);
+ ok(b1.L.dec.n===b0.L.dec.n+1,"accepter un trajet ajoute exactement un trajet déclaré");
+ ok(b1.L.pot.n===b0.L.pot.n,"le potentiel ne change pas");
+ ok(rr.trips.filter(t=>t!==prop).every(t=>true),"autres trajets");
+ over={};over[E.tripKey(acc)+"#"+acc.drv.id]="annule";
+ const b2=E.bilan(rr.trips,pp,undefined,over);
+ ok(b2.L.dec.n===b0.L.dec.n-1&&acc.accepte===false,"l'annulation du conducteur retire le trajet des bilans");
+ over[E.tripKey(acc)+"#"+acc.pax[0].id]="accepte";E.bilan(rr.trips,pp,undefined,over);
+ ok(acc.accepte===false,"un retrait l'emporte sur une acceptation");
+ const b3=E.bilan(rr.trips,pp,undefined,{});
+ ok(b3.L.dec.n===b0.L.dec.n&&b3.L.cor.n===b0.L.cor.n,"sans décision, bilan identique");
+ ok(E.tripKey(rr.trips[0])===E.tripKey(E.match(E.population(28,2026),pp).trips[0]),"clé de trajet stable");}
+/* Sensibilité financière : le coût au km agit linéairement sur les euros conducteurs */
+{const po=E.population(28,2026);let prev=-1,prevP=Infinity;
+ for(const c of [0.10,0.20,0.30,0.636]){const q=Object.assign({},E.defaults(),{coutKm:c}),bb=E.bilan(E.match(po,q).trips,q);
+  ok(bb.L.dec.eurDrv>prev,"économie conducteur croît avec le coût au km");prev=bb.L.dec.eurDrv;
+  ok(bb.L.pot.n===E.bilan(E.match(po,E.defaults()).trips,E.defaults()).L.pot.n,"le coût au km ne change pas les trajets proposés");}
+ const q0=Object.assign({},E.defaults(),{coutKm:0}),b0=E.bilan(E.match(po,q0).trips,q0);
+ ok(Math.abs(b0.L.dec.eurDrv)<1e-9||b0.L.dec.eurDrv<=0,"à 0 €/km les conducteurs n'économisent rien");}
 console.log(n+" vérifications au total");

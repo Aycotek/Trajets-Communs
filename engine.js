@@ -165,7 +165,14 @@ E.scenarioMix=function(okRate,R){
 };
 
 /* Bilan à trois niveaux : potentiel (propositions), déclaré (acceptées), corroboré (traces de test conformes). */
-E.bilan=function(trips,p,seed){
+E.tripKey=function(t){return t.day+t.dir+"|"+t.drv.id+"|"+t.pax.map(x=>x.id).sort().join(",")};
+/* Décisions simulées : over[clé|id] = "accepte" (consentement explicite) ou autre valeur = retrait. Un retrait l'emporte sur une acceptation. */
+E.decision=function(t,over){
+ if(!over)return undefined;const k=E.tripKey(t);let acc=false;
+ for(const x of [t.drv,...t.pax]){const v=over[k+"#"+x.id];if(v==="accepte")acc=true;else if(v)return false}
+ return acc?true:undefined;
+};
+E.bilan=function(trips,p,seed,over){
  const R=rng(seed||7);
  const rules={};D.REGLES.forEach(x=>rules[x.k]=p[x.k]);
  const L={pot:blank(),dec:blank(),cor:blank()};
@@ -173,7 +180,7 @@ E.bilan=function(trips,p,seed){
  trips.forEach(t=>t.pax.forEach(x=>{const k=[t.drv.id,x.id].sort().join("-");pairs[k]=(pairs[k]||0)+1}));
  trips.forEach(t=>{
   add(L.pot,t);
-  t.accepte=R()<p.accept;
+  t.accepte=R()<p.accept;const dd=E.decision(t,over);if(dd!==undefined)t.accepte=dd;t.decide=dd!==undefined;
   const sc=E.scenarioMix(p.okTrace,R);
   const base={...E.SCENARIOS[sc].t};
   base.binomeSem=Math.max(base.binomeSem,...t.pax.map(x=>pairs[[t.drv.id,x.id].sort().join("-")]));
