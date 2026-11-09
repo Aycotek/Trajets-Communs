@@ -95,12 +95,12 @@ function metrics(c,drv,g){
 }
 
 /* Appariement "chacun son tour" : à chaque tour, un conducteur propose le meilleur ajout ; on boucle jusqu'à stabilité. */
-E.match=function(pop,p,state){
+E.match=function(pop,p,state,out){
  const c=ctx(p);const driven={};pop.forEach(x=>driven[x.id]=0);
  const trips=[];let id=0;
  for(let day=0;day<5;day++){
   for(const dir of["matin","soir"]){
-   const present=pop.filter(x=>x.jours[day].present);
+   const present=pop.filter(x=>x.jours[day].present&&!(out&&out[day+dir+"|"+x.id]));
    const taken=new Set();const groups=[];
    const owners=present.filter(x=>x.aVoiture).sort((a,b)=>(driven[a.id]-driven[b.id])||a.id.localeCompare(b.id));
    const grp=new Map();
@@ -166,11 +166,13 @@ E.scenarioMix=function(okRate,R){
 
 /* Bilan à trois niveaux : potentiel (propositions), déclaré (acceptées), corroboré (traces de test conformes). */
 E.tripKey=function(t){return t.day+t.dir+"|"+t.drv.id+"|"+t.pax.map(x=>x.id).sort().join(",")};
-/* Décisions simulées : over[clé|id] = "accepte" (consentement explicite) ou autre valeur = retrait. Un retrait l'emporte sur une acceptation. */
+/* Consentements : over[clé|id]="accepte" = consentement explicite d'un participant. Sans aucune décision explicite, le tirage de population décide.
+   Dès qu'un participant a décidé, le trajet n'est confirmé que si CHAQUE participant a accepté ; ceux qui n'ont rien décidé sont simulés par le tirage (t.simAccepte).
+   Les retraits (refus, annulation) ne passent pas par ici : ils retirent la personne du créneau et le trajet est recalculé (E.match, paramètre out). */
 E.decision=function(t,over){
- if(!over)return undefined;const k=E.tripKey(t);let acc=false;
- for(const x of [t.drv,...t.pax]){const v=over[k+"#"+x.id];if(v==="accepte")acc=true;else if(v)return false}
- return acc?true:undefined;
+ if(!over)return undefined;const k=E.tripKey(t);const ps=[t.drv,...t.pax];
+ if(!ps.some(x=>over[k+"#"+x.id]==="accepte"))return undefined;
+ return ps.every(x=>over[k+"#"+x.id]==="accepte"||(!over[k+"#"+x.id]&&t.simAccepte));
 };
 E.bilan=function(trips,p,seed,over){
  const R=rng(seed||7);
@@ -180,7 +182,7 @@ E.bilan=function(trips,p,seed,over){
  trips.forEach(t=>t.pax.forEach(x=>{const k=[t.drv.id,x.id].sort().join("-");pairs[k]=(pairs[k]||0)+1}));
  trips.forEach(t=>{
   add(L.pot,t);
-  t.accepte=R()<p.accept;const dd=E.decision(t,over);if(dd!==undefined)t.accepte=dd;t.decide=dd!==undefined;
+  t.accepte=R()<p.accept;t.simAccepte=t.accepte;const dd=E.decision(t,over);if(dd!==undefined)t.accepte=dd;t.decide=dd!==undefined;
   const sc=E.scenarioMix(p.okTrace,R);
   const base={...E.SCENARIOS[sc].t};
   base.binomeSem=Math.max(base.binomeSem,...t.pax.map(x=>pairs[[t.drv.id,x.id].sort().join("-")]));

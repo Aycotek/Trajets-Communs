@@ -14,11 +14,11 @@ const eur2=x=>(x<0?"−":"")+Math.abs(x).toLocaleString("fr-FR",{minimumFraction
 const kg=x=>(x<0?"−":"")+f1(Math.abs(x))+" kg";
 const byId=id=>S.pop.find(x=>x.id===id);
 
-try{S.dec=JSON.parse(sessionStorage.getItem("tc_dec")||"{}");S.recur=JSON.parse(sessionStorage.getItem("tc_rec")||"{}")}catch(_){S.dec={};S.recur={}}
-S.dec=S.dec||{};S.recur=S.recur||{};
+try{S.dec=JSON.parse(sessionStorage.getItem("tc_dec")||"{}");S.recur=JSON.parse(sessionStorage.getItem("tc_rec")||"{}");S.out=JSON.parse(sessionStorage.getItem("tc_out")||"{}")}catch(_){S.dec={};S.recur={};S.out={}}
+S.dec=S.dec||{};S.recur=S.recur||{};S.out=S.out||{};
 function refreshAll(){recompute();vueDG();vueTrajets();vueCarte();vueControles();vueProfil();vueSemaine()}
-function saveSim(){try{sessionStorage.setItem("tc_dec",JSON.stringify(S.dec));sessionStorage.setItem("tc_rec",JSON.stringify(S.recur))}catch(_){}}
-function recompute(){S.res=E.match(S.pop,S.p);S.bil=E.bilan(S.res.trips,S.p,undefined,S.dec)}
+function saveSim(){try{sessionStorage.setItem("tc_dec",JSON.stringify(S.dec));sessionStorage.setItem("tc_rec",JSON.stringify(S.recur));sessionStorage.setItem("tc_out",JSON.stringify(S.out))}catch(_){}}
+function recompute(){S.res=E.match(S.pop,S.p,undefined,S.out);S.bil=E.bilan(S.res.trips,S.p,undefined,S.dec)}
 function simBandeau(t){return h("div",{class:"sim",role:"note"},t)}
 
 /* ---------- Décision ---------- */
@@ -214,24 +214,23 @@ function vueFin(){
 }
 
 /* ---------- Ma semaine : une case par jour et par sens, états honnêtes, aléas simulés ---------- */
-function decider(trip,uid,val,focus){const k=E.tripKey(trip)+"#"+uid;if(val===null)delete S.dec[k];else S.dec[k]=val;if(val&&val!=="accepte")delete S.recur[uid+trip.day+trip.dir];saveSim();S.alea=null;refreshAll();if(focus){const n=document.getElementById(focus);if(n)n.focus()}}
-function autreRetire(t,uid){const k=E.tripKey(t);return [t.drv,...t.pax].find(x=>x.id!==uid&&S.dec[k+"#"+x.id]&&S.dec[k+"#"+x.id]!=="accepte")}
+const slotK=(day,dir,id)=>day+dir+"|"+id;
+function apres(focus){saveSim();S.alea=null;refreshAll();if(focus){const n=document.getElementById(focus);if(n)n.focus()}}
+function accepter(t,ids,focus){ids.forEach(id=>{S.dec[E.tripKey(t)+"#"+id]="accepte"});apres(focus)}
+function retirer(day,dir,uid,val,focus){S.out[slotK(day,dir,uid)]=val;delete S.recur[uid+day+dir];apres(focus)}
+function rétablir(day,dir,uid,focus){delete S.out[slotK(day,dir,uid)];apres(focus)}
+function retraitsAutres(day,dir,uid){return S.pop.filter(q=>q.id!==uid&&S.out[slotK(day,dir,q.id)])}
 function etatCase(x,day,dir){
  const j=x.jours[day];
  if(!j.present)return {k:"conge",t:"Congé ou absent",d:"Aucun trajet à proposer ce jour."};
+ const mo=S.out[slotK(day,dir,x.id)];
+ if(mo)return {k:"refus",t:mo==="refuse"?"Refusé par vous":"Annulé par vous",d:"Vous êtes retiré de ce créneau : le trajet est recalculé sans vous, capacité, détour et bilans compris. Vous pouvez revenir sur ce choix.",trip:null,mo};
  const t=S.res.trips.find(q=>q.day===day&&q.dir===dir&&(q.drv.id===x.id||q.pax.some(y=>y.id===x.id)));
- if(!t)return {k:"seul",t:"Pas de trajet proposé",d:"Aucun partenaire compatible avec vos horaires, le détour maximal ou le temps en plus. Rien n'est réservé.",trip:null};
- const kk=E.tripKey(t),mien=S.dec[kk+"#"+x.id],autre=autreRetire(t,x.id);
- if(mien&&mien!=="accepte")return {k:"refus",t:mien==="refuse"?"Refusé par vous":"Annulé par vous",d:"Ce trajet est retiré des bilans de la simulation. Vous pouvez revenir sur ce choix.",trip:t};
- if(autre)return {k:"refus",t:"Annulé par "+(autre.id===t.drv.id?"le conducteur":"un passager")+" (simulé)",d:"Annulation simulée : aucun message réel n'est envoyé.",trip:t};
- if(!t.accepte)return {k:"prop",t:"Proposition à accepter",d:"Rien n'est engagé tant que vous ne l'acceptez pas.",trip:t};
- return {k:"conf",t:mien==="accepte"?"Accepté par vous (simulation)":"Accepté dans cette simulation",d:"Les autres participants sont simulés. Cet état n'établit ni présence ni droit à un paiement : voir niveaux déclaré et corroboré.",trip:t};
-}
-function alternative(x,day,dir,sansId){
- const clone=JSON.parse(JSON.stringify(S.pop));
- clone.forEach(q=>{if(q.id===sansId)q.jours[day].present=false});
- const r=E.match(clone,S.p);
- return r.trips.find(q=>q.day===day&&q.dir===dir&&(q.drv.id===x.id||q.pax.some(y=>y.id===x.id)))||null;
+ if(!t)return {k:"seul",t:"Pas de trajet proposé",d:"Aucun partenaire compatible avec vos horaires, le détour maximal ou le temps en plus. Rien n'est réservé. Aucun repli (taxi, prise en charge par l'entreprise) n'est promis.",trip:null};
+ const mien=S.dec[E.tripKey(t)+"#"+x.id]==="accepte";
+ if(!mien)return {k:"prop",t:"Proposition à accepter",d:"Rien n'est engagé tant que vous ne l'acceptez pas."+(t.accepte?" Dans les bilans de population ce trajet est compté accepté par un tirage simulé, pas par vous.":""),trip:t};
+ if(t.accepte)return {k:"conf",t:"Confirmé (autres participants simulés)",d:"Vous avez accepté et les autres acceptations sont simulées. Avec de vrais utilisateurs, chacun devrait accepter. Cet état n'établit ni présence ni droit à un paiement.",trip:t};
+ return {k:"att",t:"Accepté par vous, en attente des autres",d:"Votre acceptation seule ne confirme rien : les autres participants (simulés) n'ont pas accepté. Le trajet n'est pas compté dans les bilans.",trip:t};
 }
 function vueSemaine(){
  const el=$("#vue-semaine");el.replaceChildren();
@@ -243,36 +242,43 @@ function vueSemaine(){
   const ligne=h("div",{class:"case-sem e-"+e.k,role:"listitem"},
    h("div",{class:"case-tete"},h("b",{text:jn+" "+(dir==="matin"?"matin":"soir")}),h("span",{class:"puce-etat",text:e.t})),
    h("div",{class:"doux",text:e.d}));
+  const bar=h("div",{class:"barre-outils"});
   const t=e.trip;
+  const autres=retraitsAutres(day,dir,x.id);
+  if(autres.length)ligne.append(h("div",{class:"sim",role:"status",text:"Retrait simulé de "+autres.length+" participant(s) fictif(s) sur ce créneau : tous les trajets du créneau ont été recalculés (capacité, détour, temps en plus, bilans). Les accords précédents ne sont pas reportés sur un trajet aux participants différents."}));
+  if(autres.length)bar.append(h("button",{type:"button",id:idb+"-rest",onclick:()=>{autres.forEach(q=>delete S.out[slotK(day,dir,q.id)]);apres(idb+"-rest")},text:"Rétablir les participants simulés"}));
+  if(e.k==="refus")bar.append(h("button",{type:"button",id:idb+"-ann",onclick:()=>rétablir(day,dir,x.id,idb+"-acc"),text:"Revenir sur ma décision"}));
   if(t){
    const role=t.drv.id===x.id?"conducteur":"passager",rk=E.tripKey(t)+"#"+x.id;
-   ligne.append(h("div",null,"Vous seriez "+role+" : départ "+E.hm(t.ev.depart)+(dir==="matin"?", arrivée au site ":", arrivée ")+E.hm(t.ev.arrive)+", "+f1(t.ev.km)+" km."));
+   ligne.append(h("div",null,"Vous seriez "+role+" : départ "+E.hm(t.ev.depart)+(dir==="matin"?", arrivée au site ":", arrivée ")+E.hm(t.ev.arrive)+", "+f1(t.ev.km)+" km, "+(t.pax.length)+" passager(s), "+f1(t.ev.detour)+" km de détour conducteur."));
    if(role==="passager"){const me=t.pax.find(q=>q.id===x.id);ligne.append(h("div",null,"Point de prise en charge : "+(me.mode==="gare"?"gare "+me.gare.nom:"votre domicile (adresse fictive, connue du conducteur après confirmation)")+". Conducteur : profil fictif, identité selon la règle de l'onglet Trajets."))}
    else ligne.append(h("div",null,"Passagers : "+t.pax.map(q=>q.mode==="gare"?"gare "+q.gare.nom:"domicile d'un passager (adresse après confirmation)").join(" ; ")+"."));
-   const bar=h("div",{class:"barre-outils"});
-   if(e.k==="prop")bar.append(h("button",{type:"button",id:idb+"-acc",onclick:()=>decider(t,x.id,"accepte",idb+"-ret"),text:"Accepter ce trajet"}),h("button",{type:"button",id:idb+"-ref",onclick:()=>decider(t,x.id,"refuse",idb+"-ann"),text:"Refuser"}));
-   if(e.k==="refus"&&S.dec[rk])bar.append(h("button",{type:"button",id:idb+"-ann",onclick:()=>decider(t,x.id,null,idb+"-acc"),text:"Revenir sur ma décision"}));
-   if(e.k==="refus"&&!S.dec[rk]){const au=autreRetire(t,x.id);if(au)bar.append(h("button",{type:"button",id:idb+"-ann",onclick:()=>decider(t,au.id,null,idb+"-ret"),text:"Rétablir le trajet (simulation)"}))}
+   const autresIds=[t.drv,...t.pax].filter(q=>q.id!==x.id).map(q=>q.id);
+   if(e.k==="prop"){
+    bar.append(h("button",{type:"button",id:idb+"-acc",onclick:()=>accepter(t,[x.id],idb+"-ret"),text:"Accepter ce trajet"}),
+     h("button",{type:"button",id:idb+"-ref",onclick:()=>retirer(day,dir,x.id,"refuse",idb+"-ann"),text:"Refuser"}));
+   }
+   if(e.k==="att")bar.append(h("button",{type:"button",id:idb+"-sim",onclick:()=>accepter(t,autresIds,idb+"-ret"),text:"Simuler : les autres acceptent"}),
+     h("button",{type:"button",id:idb+"-ret",onclick:()=>retirer(day,dir,x.id,"annule",idb+"-ann"),text:"Je ne peux plus faire ce trajet"}));
+   if(e.k==="prop"||e.k==="att"||e.k==="conf"){
+    const cible=role==="passager"?t.drv:t.pax[0];
+    bar.append(h("button",{type:"button",id:idb+"-aut",onclick:()=>retirer(day,dir,cible.id,"annule-sim",idb+"-rest"),text:role==="passager"?"Simuler : le conducteur se retire":"Simuler : un passager se retire"}));
+   }
    if(e.k==="conf"){
     const rec=S.recur[x.id+key];
     const cb=h("input",{type:"checkbox",id:"rec-"+key,onchange:ev=>{if(ev.target.checked)S.recur[x.id+key]=true;else delete S.recur[x.id+key];saveSim();vueSemaine();const n=document.getElementById("rec-"+key);if(n)n.focus()}});cb.checked=!!rec;
     ligne.append(h("label",{class:"rec",for:"rec-"+key},cb," Je demande à reproduire ce créneau chaque semaine"));
-    if(rec)ligne.append(h("div",{class:"doux",text:"Demande de récurrence enregistrée dans cette simulation (conservée pendant la session). Elle reste une demande : l'autre personne doit accepter, vous la retirez en décochant, et aucun argent n'est engagé."}));
-    bar.append(h("button",{type:"button",onclick:()=>{S.alea={key,k:"retard"};vueSemaine()},text:"Je suis en retard de 10 min"}),h("button",{type:"button",id:idb+"-ret",onclick:()=>decider(t,x.id,"annule",idb+"-ann"),text:"Je ne peux plus faire ce trajet"}));
-    if(role==="passager")bar.append(h("button",{type:"button",onclick:()=>{decider(t,t.drv.id,"annule");S.alea={key,k:"cond"};vueSemaine()},text:"Simuler : le conducteur annule"}));
-   }
-   if(bar.children.length)ligne.append(bar);
-   if(S.alea&&S.alea.key===key&&(e.k==="conf"||S.alea.k==="cond")){
-    const a=S.alea.k;let msg;
-    if(a==="retard"){const extra=Math.max(...t.ev.extras.map(q=>q.extra));msg="Retard simulé : aucun message réel n'est envoyé et personne n'est prévenu. Le trajet n'est pas annulé. Temps en plus déjà prévu pour un passager : "+f0(extra)+" min ; avec 10 min de retard, "+f0(extra+10)+" min pour un maximum fixé à "+S.p.maxExtraMin+" min"+(extra+10>S.p.maxExtraMin?" : le maximum serait dépassé, la décision de partir ou non reviendrait aux personnes concernées.":" : le maximum reste respecté.")}
-    else{const alt=alternative(x,day,dir,t.drv.id);msg="Annulation du conducteur simulée, trajet retiré des bilans. "+(alt?"Alternative trouvée par l'algorithme sans ce conducteur : départ "+E.hm(alt.ev.depart)+". C'est une proposition à accepter, pas une place garantie.":"Pas d'alternative proposée avec les profils présents ce jour. Aucun repli (taxi, prise en charge par l'entreprise) n'est promis : il faut une décision de l'entreprise.")}
-    ligne.append(h("div",{class:"sim",role:"status",text:msg}));
+    if(rec)ligne.append(h("div",{class:"doux",text:"Demande de récurrence enregistrée pour la session de démonstration seulement : elle disparaît à la fermeture de l'onglet, n'est pas durable et n'engage personne. Dans un vrai produit, l'autre personne devrait accepter. Vous la retirez en décochant ; aucun argent n'est engagé."}));
+    bar.append(h("button",{type:"button",onclick:()=>{S.alea=S.alea&&S.alea.key===key?null:{key,k:"retard"};vueSemaine()},text:"Je suis en retard de 10 min"}),h("button",{type:"button",id:idb+"-ret",onclick:()=>retirer(day,dir,x.id,"annule",idb+"-ann"),text:"Je ne peux plus faire ce trajet"}));
+    if(S.alea&&S.alea.key===key){const extra=Math.max(...t.ev.extras.map(q=>q.extra));
+     ligne.append(h("div",{class:"sim",role:"status",text:"Retard simulé : aucun message réel n'est envoyé et personne n'est prévenu. Le trajet n'est pas annulé. Temps en plus déjà prévu pour un passager : "+f0(extra)+" min ; avec 10 min de retard, "+f0(extra+10)+" min pour un maximum fixé à "+S.p.maxExtraMin+" min"+(extra+10>S.p.maxExtraMin?" : le maximum serait dépassé, la décision de partir ou non reviendrait aux personnes concernées.":" : le maximum reste respecté.")}))}
    }
   }
+  if(bar.children.length)ligne.append(bar);
   grille.append(ligne)}));
  el.append(h("div",{class:"carte"},h("h2",{text:"Ma semaine"}),
-  simBandeau("Simulation : la semaine est proposée à l'avance à partir du profil. Rien n'est accepté, réservé ou payé à votre place : vous acceptez ou refusez chaque trajet. Les autres participants sont simulés, aucun message réel n'est envoyé."),
-  h("div",{class:"barre-outils"},sel,h("button",{type:"button",onclick:()=>{S.dec={};S.recur={};saveSim();S.alea=null;refreshAll()},text:"Effacer mes choix simulés"})),grille));
+  simBandeau("Simulation : la semaine est proposée à l'avance à partir du profil. Rien n'est accepté, réservé ou payé à votre place : vous acceptez ou refusez chaque trajet. Les autres participants sont fictifs et simulés, aucun message réel n'est envoyé. Vos choix ne sont gardés que dans cet onglet (sessionStorage)."),
+  h("div",{class:"barre-outils"},sel,h("button",{type:"button",onclick:()=>{S.dec={};S.recur={};S.out={};saveSim();S.alea=null;refreshAll()},text:"Effacer mes choix simulés"})),grille));
 }
 
 /* ---------- Contrôles anti-abus ---------- */

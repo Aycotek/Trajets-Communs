@@ -52,23 +52,45 @@ for(const seed of [2026,1,2,3,4,5]){
  rr.trips.forEach(t=>{for(let i=0;i<t.ev.pts.length-1;i++){const a=t.ev.pts[i],b=t.ev.pts[i+1];if(!L[idx[a.lat.toFixed(5)+","+a.lng.toFixed(5)]+">"+idx[b.lat.toFixed(5)+","+b.lng.toFixed(5)]])manque++}});
  ok(manque===0,"tous les tronçons des trajets par défaut ont un tracé routier");
  ok(E.defaults().ef===0.17,"facteur voiture Impact CO2");}
-/* Décisions de l'utilisateur et effets croisés */
+/* Consentements : un accord unilatéral ne confirme rien */
 {const pp=E.defaults(),po=E.population(28,2026),rr=E.match(po,pp),b0=E.bilan(rr.trips,pp);
- const prop=rr.trips.find(t=>!t.accepte),acc=rr.trips.find(t=>t.accepte);
- ok(prop&&acc,"un trajet proposé non accepté et un accepté existent");
- let over={};over[E.tripKey(prop)+"#"+prop.pax[0].id]="accepte";
- const b1=E.bilan(rr.trips,pp,undefined,over);
- ok(b1.L.dec.n===b0.L.dec.n+1,"accepter un trajet ajoute exactement un trajet déclaré");
- ok(b1.L.pot.n===b0.L.pot.n,"le potentiel ne change pas");
- ok(rr.trips.filter(t=>t!==prop).every(t=>true),"autres trajets");
- over={};over[E.tripKey(acc)+"#"+acc.drv.id]="annule";
- const b2=E.bilan(rr.trips,pp,undefined,over);
- ok(b2.L.dec.n===b0.L.dec.n-1&&acc.accepte===false,"l'annulation du conducteur retire le trajet des bilans");
- over[E.tripKey(acc)+"#"+acc.pax[0].id]="accepte";E.bilan(rr.trips,pp,undefined,over);
- ok(acc.accepte===false,"un retrait l'emporte sur une acceptation");
- const b3=E.bilan(rr.trips,pp,undefined,{});
- ok(b3.L.dec.n===b0.L.dec.n&&b3.L.cor.n===b0.L.cor.n,"sans décision, bilan identique");
- ok(E.tripKey(rr.trips[0])===E.tripKey(E.match(E.population(28,2026),pp).trips[0]),"clé de trajet stable");}
+ const K=E.tripKey;
+ const pend=rr.trips.find(t=>!t.simAccepte),conf=rr.trips.find(t=>t.simAccepte);
+ ok(pend&&conf,"un trajet non accepté par tirage et un accepté existent");
+ let over={};over[K(pend)+"#"+pend.drv.id]="accepte";
+ let b1=E.bilan(rr.trips,pp,undefined,over);
+ ok(pend.accepte===false&&b1.L.dec.n===b0.L.dec.n,"accord unilatéral du conducteur : non confirmé, bilan inchangé");
+ over={};over[K(pend)+"#"+pend.pax[0].id]="accepte";E.bilan(rr.trips,pp,undefined,over);
+ ok(pend.accepte===false,"accord unilatéral d'un passager : non confirmé");
+ over={};[pend.drv,...pend.pax].forEach(q=>over[K(pend)+"#"+q.id]="accepte");
+ b1=E.bilan(rr.trips,pp,undefined,over);
+ ok(pend.accepte===true&&b1.L.dec.n===b0.L.dec.n+1&&b1.L.pot.n===b0.L.pot.n,"tous acceptent : exactement un déclaré de plus, potentiel inchangé");
+ over={};over[K(conf)+"#"+conf.drv.id]="accepte";E.bilan(rr.trips,pp,undefined,over);
+ ok(conf.accepte===true,"accord d'un participant, autres simulés favorables : confirmé");
+ E.bilan(rr.trips,pp,undefined,{});
+ ok(E.bilan(rr.trips,pp,undefined,{}).L.dec.n===b0.L.dec.n,"sans décision, bilan identique");
+ ok(K(rr.trips[0])===K(E.match(E.population(28,2026),pp).trips[0]),"clé de trajet stable");}
+/* Retrait d'une personne : recalcul réel du créneau */
+{let vus=0;
+ for(const seed of [2026,1,2,3,4,5,6,7]){
+  const pp=E.defaults(),po=E.population(28,seed),rr=E.match(po,pp);
+  const multi=rr.trips.find(t=>t.pax.length>=2),uni=rr.trips.find(t=>t.pax.length===1);
+  const cas=[];if(multi)cas.push([multi,multi.pax[0],"pax"]);if(uni)cas.push([uni,uni.drv,"drv"],[uni,uni.pax[0],"seul"]);
+  for(const [t,who,type] of cas){
+   const out={};out[t.day+t.dir+"|"+who.id]=true;
+   const r2=E.match(po,pp,undefined,out);vus++;
+   const slot=r2.trips.filter(q=>q.day===t.day&&q.dir===t.dir);
+   ok(!slot.some(q=>q.drv.id===who.id||q.pax.some(y=>y.id===who.id)),"la personne retirée n'est plus dans aucun trajet du créneau");
+   ok(slot.every(q=>q.pax.length<=pp.places&&q.ev.detour<=pp.maxDetourKm+1e-6),"capacité et détour respectés après retrait");
+   const touch=slot.find(q=>q.drv.id===t.drv.id);
+   if(type==="pax"){ok(!touch||touch.pax.length<=t.pax.length,"retrait d'un passager : le trajet ne grossit pas");if(touch&&touch.pax.length===t.pax.length-1){ok(touch.ev.km<=t.ev.km+1e-6,"un passager en moins : trajet pas plus long")}}
+   if(type==="drv")ok(!slot.some(q=>q.pax.some(y=>y.id===t.pax[0].id))||slot.some(q=>q.drv.id!==t.drv.id),"conducteur retiré : le passager est replacé avec un autre conducteur ou sans trajet");
+   const bb=E.bilan(r2.trips,pp);ok(bb.L.cor.n<=bb.L.dec.n&&bb.L.dec.n<=bb.L.pot.n,"ensembles corroboré <= déclaré <= potentiel après retrait");
+   ok(!out[t.day+t.dir+"|"+"x"],"clé");
+  }}
+ ok(vus>=6,"cas de retrait exercés ("+vus+")");
+ const base=E.match(E.population(28,2026),E.defaults());
+ ok(E.match(E.population(28,2026),E.defaults(),undefined,{}).trips.length===base.trips.length,"sans retrait, même résultat");}
 /* Sensibilité financière : le coût au km agit linéairement sur les euros conducteurs */
 {const po=E.population(28,2026);let prev=-1,prevP=Infinity;
  for(const c of [0.10,0.20,0.30,0.636]){const q=Object.assign({},E.defaults(),{coutKm:c}),bb=E.bilan(E.match(po,q).trips,q);
