@@ -14,6 +14,7 @@ const eur=x=>(x<0?"−":"")+Math.abs(x).toLocaleString("fr-FR",{minimumFractionD
 const eur2=x=>(x<0?"−":"")+Math.abs(x).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2})+" €";
 const kg=x=>(x<0?"−":"")+f1(Math.abs(x))+" kg";
 const byId=id=>S.pop.find(x=>x.id===id);
+const lblPoint=p=>p.gare&&D.GARES.some(g=>g.id===p.gare.id)?"gare "+p.gare.nom:(p.gare?p.gare.nom:"");
 
 try{S.dec=JSON.parse(sessionStorage.getItem("tc_dec")||"{}");S.recur=JSON.parse(sessionStorage.getItem("tc_rec")||"{}");S.out=JSON.parse(sessionStorage.getItem("tc_out")||"{}")}catch(_){S.dec={};S.recur={};S.out={}}
 S.dec=S.dec||{};S.recur=S.recur||{};S.out=S.out||{};
@@ -87,8 +88,8 @@ function carteTrajet(t){
  else{etat=["e-res","Réservé : annulable, identités masquées"];visible=false}
  const nom=(x,role)=>visible&&isPart&&x.id!==viewer?x.nom:(x.id===viewer?"Vous ("+x.nom+")":(role+" "+"●●●●"));
  const lignes=[h("div",null,"Conducteur : ",h("b",{text:nom(t.drv,"Conducteur")})),
-  ...t.pax.map(x=>h("div",null,"Passager : ",h("b",{text:nom(x,"Passager")}),x.mode==="gare"?" · arrive à la gare "+x.gare.nom:" · prise en charge à domicile"))];
- if(visible&&viewer===t.drv.id)t.pax.forEach(x=>lignes.push(h("div",{class:"doux",text:"Prise en charge de "+x.nom+" : "+(x.mode==="gare"?"gare "+x.gare.nom:x.adresse+" (adresse fictive)")})));
+  ...t.pax.map(x=>h("div",null,"Passager : ",h("b",{text:nom(x,"Passager")}),x.mode==="gare"?" · arrive au point « "+lblPoint(x)+" »":" · prise en charge à domicile"))];
+ if(visible&&viewer===t.drv.id)t.pax.forEach(x=>lignes.push(h("div",{class:"doux",text:"Prise en charge de "+x.nom+" : "+(x.mode==="gare"?"point « "+lblPoint(x)+" »":x.adresse+" (adresse fictive)")})));
  if(!isPart&&viewer!=="dg")lignes.push(h("div",{class:"doux",text:"Vous n'êtes pas sur ce trajet : seul le nombre de participants est visible."}));
  if(viewer==="dg")lignes.push(h("div",{class:"doux",text:"Vue direction : noms et adresses jamais affichés."}));
  const m=t.m,e=t.ev;
@@ -273,7 +274,7 @@ dessin.forEach((t,i)=>{const c=colDe(t),faint=!!sel&&t!==sel;const g=R&&R.routes
   const px=byId(S.cartePers),pj=px.jours[S.carteJour];
   const pt=S.res.trips.find(t=>t.day===S.carteJour&&t.dir===S.carteDir&&(t.drv.id===px.id||t.pax.some(q=>q.id===px.id)));
   const pan=h("div",{class:"carte-detail",id:"panneau-pers",tabindex:"-1"},h("h3",{text:px.nom+" (fictif)"}),
-   h("p",{class:"doux",text:px.commune+", "+(px.aVoiture?(px.role==="flexible"?"a une voiture et accepte d'alterner":"a une voiture et conduit"):"n'a pas de voiture")+(px.mode==="gare"?", arrive par la gare "+px.gare.nom:", prise en charge à domicile")+". "+(pj.present?"Présent ce jour.":"En congé ou absent ce jour.")}));
+   h("p",{class:"doux",text:px.commune+", "+(px.aVoiture?(px.role==="flexible"?"a une voiture et accepte d'alterner":"a une voiture et conduit"):"n'a pas de voiture")+(px.mode==="gare"?", arrive au point « "+lblPoint(px)+" »":", prise en charge à domicile")+". "+(pj.present?"Présent ce jour.":"En congé ou absent ce jour.")}));
   if(pt){const idx=tsAll.indexOf(pt);
    pan.append(h("p",{text:"Trajet proposé "+E.JOURS[S.carteJour].toLowerCase()+" "+S.carteDir+" : "+(pt.drv.id===px.id?"conducteur":"passager")+", départ "+E.hm(pt.ev.depart)+", arrivée "+E.hm(pt.ev.arrive)+", "+(pt.pax.length)+" passager(s)."+(pt.drv.id!==px.id?" Conducteur : "+pt.drv.nom+" (fictif).":"")}),
     h("div",{class:"barre-outils"},h("button",{type:"button",id:"pers-voir",onclick:()=>{S.carteSel=idx;S.carteDz=0;S.cartePers=null;vueCarte();const n=document.getElementById("carte-choix");if(n)n.focus()},text:"Voir le détail de ce trajet"})));
@@ -308,7 +309,7 @@ dessin.forEach((t,i)=>{const c=colDe(t),faint=!!sel&&t!==sel;const g=R&&R.routes
  {const cur=rail.querySelector(".actif");if(cur)rail.scrollLeft=Math.max(0,cur.offsetLeft-(rail.clientWidth-cur.offsetWidth)/2)}
  el.querySelector(".carte").append(panneauDeplace());
  const i1=el.querySelector(".leg i.d1"),i2=el.querySelector(".leg i.d2");i1.style.background="#6b1d2c";i2.style.background="#b9802f";
- const liste=h("ol",{class:"liste-carte"},ts.map(t=>h("li",null,h("b",{text:t.drv.nom}),(" conduit : "+t.ev.pts.slice(0,-1).length+" arrêt(s) avant le site, départ "+E.hm(t.ev.depart)+", arrivée "+E.hm(t.ev.arrive)+", "+f1(t.ev.km)+" km, détour "+f1(t.ev.detour)+" km. Passagers : "+t.pax.map(x=>x.nom+(x.mode==="gare"?" (gare "+x.gare.nom+")":" (domicile)")).join(", ")+"."))));
+ const liste=h("ol",{class:"liste-carte"},ts.map(t=>h("li",null,h("b",{text:t.drv.nom}),(" conduit : "+t.ev.pts.slice(0,-1).length+" arrêt(s) avant le site, départ "+E.hm(t.ev.depart)+", arrivée "+E.hm(t.ev.arrive)+", "+f1(t.ev.km)+" km, détour "+f1(t.ev.detour)+" km. Passagers : "+t.pax.map(x=>x.nom+(x.mode==="gare"?" (« "+lblPoint(x)+" »)":" (domicile)")).join(", ")+"."))));
  el.querySelector(".carte").append(h("details",{open:""},h("summary",{text:"Version texte de la carte ("+ts.length+" trajet(s))"}),ts.length?liste:h("p",{class:"doux",text:"Aucun trajet ce jour et ce sens."})));
 }
 
@@ -337,14 +338,29 @@ function vueProfil(){
      inp.classList.remove("ko");inp.removeAttribute("aria-invalid");msg.textContent="";
      inp.value=E.hm(m);if(m!==j[key]){j[key]=m;refresh()}}});
    return h("span",{class:"hm-wrap"},t,msg)};
-  tb.append(h("tr",null,h("td",{text:E.JOURS[i]}),h("td",{"data-l":"Présent"},cb,j.present?"":" congé"),h("td",{"data-l":"Arrivée entre"},h("div",{class:"plage"},tin("a0"),tin("a1"))),h("td",{"data-l":"Départ entre"},h("div",{class:"plage"},tin("d0"),tin("d1")))));
+  tb.append(h("tr",{id:"jour-"+i},h("td",{text:E.JOURS[i]}),h("td",{"data-l":"Présent"},cb,j.present?"":" congé"),h("td",{"data-l":"Arrivée entre"},h("div",{class:"plage"},tin("a0"),tin("a1"))),h("td",{"data-l":"Départ entre"},h("div",{class:"plage"},tin("d0"),tin("d1")))));
  });
  tbl.append(tb);
  el.append(h("div",{class:"carte"},h("h2",{text:"Profil de démonstration"}),
   simBandeau("Ceci n'est pas une connexion. Un vrai compte demande une authentification (par exemple le compte professionnel via Teams), une base de données et l'accord de la DSI : voir l'onglet Réel. Ici on choisit un profil fictif pour montrer l'effet des horaires et des congés."),
   h("div",{class:"barre-outils"},sel),
-  h("p",null,h("b",{text:x.nom}),", "+x.commune+", "+(x.aVoiture?(x.role==="flexible"?"a une voiture et accepte d'alterner":"a une voiture et conduit"):"n'a pas de voiture")+(x.mode==="gare"?", arrive par la gare "+x.gare.nom:", prise en charge à domicile")),
+  h("p",null,h("b",{text:x.nom}),", "+x.commune+", "+(x.aVoiture?(x.role==="flexible"?"a une voiture et accepte d'alterner":"a une voiture et conduit"):"n'a pas de voiture")+(x.mode==="gare"?", arrive au point « "+lblPoint(x)+" »":", prise en charge à domicile")),
   h("p",{class:"doux",text:"Adresse fictive : "+x.adresse}),
+  (()=>{if(x.aVoiture)return null;
+   const ptsRDV=D.GARES.concat(D.RDV||[]);
+   const ptsTries=ptsRDV.map(s=>({s,d:E.hav(x.home,s)})).sort((a,b)=>a.d-b.d);
+   const selMode=h("select",{"aria-label":"Mode de prise en charge",onchange:e=>{
+    if(e.target.value==="domicile"){x.mode="domicile";x.gare=null}
+    else{const g=ptsRDV.find(q=>q.id===e.target.value);if(g){x.mode="gare";x.gare=g}}
+    refresh();vueProfil();
+    const s2=document.querySelector('#vue-profil select[aria-label="Mode de prise en charge"]');if(s2)s2.focus()}},
+    h("option",{value:"domicile",text:"Prise en charge à domicile (adresse précise)"}),
+    ...ptsTries.map(q=>h("option",{value:q.s.id,text:"Point de rendez-vous : "+q.s.nom+" (à "+f1(q.d)+" km du domicile fictif)"})));
+   selMode.value=x.mode==="gare"&&x.gare?x.gare.id:"domicile";
+   return h("div",{class:"carte"},h("h3",{text:"Prise en charge : à domicile ou à un point de rendez-vous"}),
+    h("div",{class:"barre-outils"},selMode),
+    h("p",{role:"status",text:x.mode==="gare"&&x.gare?"Point choisi : "+x.gare.nom+" (à "+f1(E.hav(x.home,x.gare))+" km du domicile fictif).":"Point choisi : le domicile (adresse précise communiquée au conducteur après confirmation)."}),
+    h("p",{class:"doux",text:"Sur le modèle d'un arrêt de bus, un point de rendez-vous évite de partager l'adresse exacte du domicile. Points proposés dans cette démonstration : les quatre gares, le centre du village de Mont-Saint-Aignan et la place Saint-Sever à Rouen, tous avec durées routières précalculées. Le choix relance l'appariement aussitôt."}))})(),
   tbl,
   h("p",{class:"doux",text:"Les heures se saisissent au format 24 heures (par exemple 07:30 ou 7h30). Chaque changement relance l'appariement : décale une plage ou pose un congé, puis regarde les onglets Carte et Quotidien."}),
   h("div",{id:"mes-trajets"})));
@@ -421,8 +437,8 @@ function vueSemaine(){
   if(t){
    const role=t.drv.id===x.id?"conducteur":"passager",rk=E.tripKey(t)+"#"+x.id;
    ligne.append(h("div",null,"Vous seriez "+role+" : départ "+E.hm(t.ev.depart)+(dir==="matin"?", arrivée au site ":", arrivée ")+E.hm(t.ev.arrive)+", "+f1(t.ev.km)+" km, "+(t.pax.length)+" passager(s), "+f1(t.ev.detour)+" km de détour conducteur."));
-   if(role==="passager"){const me=t.pax.find(q=>q.id===x.id);ligne.append(h("div",null,"Point de prise en charge : "+(me.mode==="gare"?"gare "+me.gare.nom:"votre domicile (adresse fictive, connue du conducteur après confirmation)")+". Conducteur : profil fictif, identité selon la règle de l'onglet Carte."))}
-   else ligne.append(h("div",null,"Passagers : "+t.pax.map(q=>q.mode==="gare"?"gare "+q.gare.nom:"domicile d'un passager (adresse après confirmation)").join(" ; ")+"."));
+   if(role==="passager"){const me=t.pax.find(q=>q.id===x.id);ligne.append(h("div",null,"Point de prise en charge : "+(me.mode==="gare"?"point « "+lblPoint(me)+" »":"votre domicile (adresse fictive, connue du conducteur après confirmation)")+". Conducteur : profil fictif, identité selon la règle de l'onglet Carte."))}
+   else ligne.append(h("div",null,"Passagers : "+t.pax.map(q=>q.mode==="gare"?"point « "+lblPoint(q)+" »":"domicile d'un passager (adresse après confirmation)").join(" ; ")+"."));
    const autresIds=[t.drv,...t.pax].filter(q=>q.id!==x.id).map(q=>q.id);
    if(e.k==="prop"){
     bar.append(h("button",{type:"button",id:idb+"-acc",onclick:()=>accepter(t,[x.id],idb+"-ret"),text:"Accepter ce trajet"}),
@@ -440,7 +456,7 @@ function vueSemaine(){
     ligne.append(h("label",{class:"rec",for:"rec-"+key},cb," Je demande à reproduire ce créneau chaque semaine"));
     if(rec)ligne.append(cav("Demande valable pour cette session de démonstration seulement, non durable, sans engagement.","Elle disparaît à la fermeture de l'onglet. Dans un vrai produit, l'autre personne devrait accepter. Vous la retirez en décochant ; aucun argent n'est engagé."));
     if(role==="conducteur")bar.append(h("button",{type:"button",onclick:()=>{S.alea=S.alea&&S.alea.key===key&&S.alea.k==="absent"?null:{key,k:"absent"};vueSemaine()},text:"Simuler : un passager est absent"}));
-    bar.append(h("button",{type:"button",onclick:()=>{S.alea=S.alea&&S.alea.key===key&&S.alea.k==="retard"?null:{key,k:"retard"};vueSemaine()},text:"Je suis en retard de 10 min"}),h("button",{type:"button",id:idb+"-ret",onclick:()=>retirer(day,dir,x.id,"annule",idb+"-ann"),text:"Je ne peux plus faire ce trajet"}));
+    bar.append(h("button",{type:"button",id:idb+"-mod",onclick:()=>{document.querySelector('.onglets button[data-vue="profil"]').click();const r=document.getElementById("jour-"+day);if(r){r.scrollIntoView({block:"center"});const inp=r.querySelector("input.hm");if(inp)inp.focus()}},text:"Modifier mes horaires du "+E.JOURS[day]+" (toutes les semaines)"}),h("button",{type:"button",onclick:()=>{S.alea=S.alea&&S.alea.key===key&&S.alea.k==="retard"?null:{key,k:"retard"};vueSemaine()},text:"Je suis en retard de 10 min"}),h("button",{type:"button",id:idb+"-ret",onclick:()=>retirer(day,dir,x.id,"annule",idb+"-ann"),text:"Je ne peux plus faire ce trajet"}));
     if(S.alea&&S.alea.key===key&&S.alea.k==="absent")ligne.append(h("div",{class:"sim",role:"status",text:"Absence simulée d'un passager au point de prise en charge. Elle ne prouve pas sa faute et n'ouvre aucun droit à un paiement ou une pénalité dans cette démonstration. Le trajet reste compté comme confirmé : un vrai produit demande une règle (délai d'attente, preuve contraire) fixée par l'entreprise, et la corroboration de ce trajet serait à vérifier."}));
     if(S.alea&&S.alea.key===key&&S.alea.k==="retard"){const extra=Math.max(...t.ev.extras.map(q=>q.extra));
      ligne.append(h("div",{class:"sim",role:"status",text:"Retard simulé : aucun message réel n'est envoyé et personne n'est prévenu. Le trajet n'est pas annulé. Temps en plus déjà prévu pour un passager : "+f0(extra)+" min ; avec 10 min de retard, "+f0(extra+10)+" min pour un maximum fixé à "+S.p.maxExtraMin+" min"+(extra+10>S.p.maxExtraMin?" : le maximum serait dépassé, la décision de partir ou non reviendrait aux personnes concernées.":" : le maximum reste respecté.")}))}

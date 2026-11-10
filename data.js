@@ -9,6 +9,12 @@ D.GARES=[
  {id:"EL",nom:"Elbeuf - Saint-Aubin",lat:49.30271,lng:1.01013},
  {id:"BA",nom:"Barentin",lat:49.54918,lng:0.95362}
 ];
+/* Points de rendez-vous publics ajoutés le 10/11/2026 (géocodage Géoplateforme IGN, data.geopf.fr) ;
+   durées routières précalculées dans route-data.js (extend-rdv.js). */
+D.RDV=[
+ {id:"MSA",nom:"Place de l'Église, Mont-Saint-Aignan (centre du village)",lat:49.470794,lng:1.084378},
+ {id:"SS",nom:"Place Saint-Sever, Rouen (direction Saint-Sever)",lat:49.430784,lng:1.085467}
+];
 D.COMMUNES=[
  {n:"Bois-Guillaume",lat:49.47075,lng:1.11542,w:3},
  {n:"Déville-lès-Rouen",lat:49.46996,lng:1.04991,w:2},
