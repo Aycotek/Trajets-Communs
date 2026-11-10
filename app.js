@@ -5,6 +5,7 @@ const S={p:E.defaults(),pop:E.population(28,2026),day:0,dir:"matin",avant:90,reg
 const $=s=>document.querySelector(s);
 function h(tag,attrs,...kids){const e=document.createElement(tag);if(attrs)for(const k in attrs){if(k==="class")e.className=attrs[k];else if(k.startsWith("on"))e.addEventListener(k.slice(2),attrs[k]);else if(k==="text")e.textContent=attrs[k];else e.setAttribute(k,attrs[k])}
  kids.flat().forEach(c=>{if(c==null||c===false)return;e.append(c.nodeType?c:document.createTextNode(String(c)))});return e}
+window.TCh=h;/* crochet de test : le harnais vérifie que toute chaîne, même hostile, est rendue via textContent */
 const svgNS="http://www.w3.org/2000/svg";
 function sv(tag,attrs,...kids){const e=document.createElementNS(svgNS,tag);if(attrs)for(const k in attrs)e.setAttribute(k,attrs[k]);kids.flat().forEach(c=>{if(c==null)return;e.append(c.nodeType?c:document.createTextNode(String(c)))});return e}
 const f1=x=>(Math.round(x*10)/10).toLocaleString("fr-FR",{minimumFractionDigits:1,maximumFractionDigits:1});
@@ -166,7 +167,9 @@ function vueCarte(){
  svg.append(sv("rect",{x:0,y:0,width:W,height:H,fill:"#efe6d6"}));
  const tx0=ox/256,ty0=oy/256;
  for(let i=0;i<nx;i++)for(let j=0;j<ny;j++)svg.append(sv("image",{href:"https://tile.openstreetmap.org/"+z+"/"+(tx0+i)+"/"+(ty0+j)+".png",x:i*256,y:j*256,width:256,height:256,opacity:".92"}));
- svg.addEventListener("error",()=>{const n=el.querySelector("#tuiles-ko");if(n)n.hidden=false},true);
+ let tuilesOk=0;const noteTuiles=()=>{const n=el.querySelector("#tuiles-ko");if(!n)return;n.hidden=false;n.textContent=(tuilesOk>0?"Le fond de carte OpenStreetMap n'est que partiellement chargé : certaines tuiles manquent. ":"Le fond de carte OpenStreetMap n'a pas pu être chargé. ")+"Les tracés et la liste texte ci-dessous restent utilisables. En production, ce point est couvert par un fournisseur de tuiles sous contrat ou un hébergement propre."};
+ svg.addEventListener("error",ev=>{if(ev.target&&ev.target.tagName==="image")noteTuiles()},true);
+ svg.addEventListener("load",ev=>{if(ev.target&&ev.target.tagName==="image")tuilesOk++},true);
  const R=window.TCROUTE,idx={};if(R)R.pts.forEach((q,i)=>{idx[q[0].toFixed(5)+","+q[1].toFixed(5)]=i});
  const kk=q=>q.lat.toFixed(5)+","+q.lng.toFixed(5);
  const ts=sel?[sel]:tsAll;
@@ -202,7 +205,7 @@ function vueCarte(){
  svg.append(sv("text",{x:W-4,y:H-5,"font-size":8*f*.85,"text-anchor":"end",fill:"#333",stroke:"#fff","stroke-width":f*.5,"paint-order":"stroke"},"© contributeurs OpenStreetMap"));
  const ageJ=R&&R.date?Math.floor((Date.now()-new Date(R.date+"T00:00:00Z").getTime())/864e5):0;
  el.append(h("div",{class:"carte"},h("h2",{text:"Carte des trajets"}),bar,zb,svg,
-  h("p",{id:"tuiles-ko",class:"note-limite",hidden:"",text:"Le fond de carte OpenStreetMap n'a pas pu être chargé (réseau coupé ou serveur de tuiles bloquant) : les tracés et la liste texte ci-dessous restent utilisables. En production, ce point est couvert par un fournisseur de tuiles sous contrat ou un hébergement propre."}),
+  h("p",{id:"tuiles-ko",class:"note-limite",hidden:"",text:"Le fond de carte OpenStreetMap n'a pas pu être chargé. Les tracés et la liste texte ci-dessous restent utilisables. En production, ce point est couvert par un fournisseur de tuiles sous contrat ou un hébergement propre."}),
   h("div",{class:"leg"},h("span",null,h("i",{class:"d1"}),"rond : avec voiture"),h("span",null,h("i",{class:"d2 los"}),"losange : sans voiture"),h("span",{text:"carré bleu : gare · cercle blanc cerclé : prise en charge · pointillé : absent ce jour"})),
   h("p",{class:"doux",text:"Fond : OpenStreetMap (© contributeurs, ODbL), chargé depuis tile.openstreetmap.org. Tracés : itinéraire routier du conducteur vers le site, précalculé le "+(R?R.date:"?")+" (OSRM, sans trafic)."+(ageJ>183?" Attention : tracés vieux de "+ageJ+" jours (plus de 6 mois) : à recalculer avant tout usage réel.":"")+" Trajets à plusieurs : conducteur, prises en charge puis site, tracés sur les routes quand les tronçons sont précalculés, sinon en pointillé : "+tracesReelles+" trajet(s) tracé(s) sur "+ts.length+"."}),
   simBandeau("Domiciles inventés (calés sur la route la plus proche pour le calcul). Données OpenStreetMap libres (ODbL), mais le serveur public de tuiles est limité à un usage léger : pour un déploiement, tuiles auto-hébergées ou fournisseur dont les conditions conviennent. Important : en affichant la carte, votre navigateur envoie votre adresse IP et la zone affichée au serveur de tuiles OpenStreetMap. Ce sont des données réelles du visiteur, même si tous les profils sont inventés. Les tracés viennent d'un précalcul ponctuel sur le serveur de démonstration OSRM (sans garantie, ne convient pas à un produit). Détail dans SOURCES.md.")));

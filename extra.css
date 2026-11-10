@@ -8,7 +8,7 @@ h2{font-family:var(--serif);color:var(--bordeaux-nuit);font-size:1.25rem;margin:
 h3{font-family:var(--serif);color:var(--bordeaux-nuit);font-size:1.02rem;margin:0 0 6px}
 p,li{font-size:.9rem}
 .doux{color:var(--doux);font-size:.82rem}
-.grille{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:10px 0}
+.grille{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr));gap:10px;margin:10px 0}
 .kpi{background:rgba(255,255,255,.7);border:1px solid var(--bord);border-radius:16px;padding:10px 12px}
 .kpi b{display:block;font-family:var(--serif);font-size:1.5rem;color:var(--bordeaux-nuit);line-height:1.15}
 .kpi span{font-size:.76rem;color:var(--doux)}
@@ -57,7 +57,7 @@ svg.carte-svg{width:100%;height:auto;background:rgba(255,250,243,.7);border:1px 
 .barre-outils select{max-width:100%;box-sizing:border-box;min-height:44px}
 
 .semaine{display:grid;gap:8px;grid-template-columns:1fr}
-@media (min-width:700px){.semaine{grid-template-columns:1fr 1fr}}
+@media (min-width:700px){.semaine{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
 .case-sem{border:1px solid var(--bord);border-radius:14px;padding:10px 12px;background:#fffaf3}
 .case-tete{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:4px}
 .case-sem.e-conge{opacity:.7}
@@ -90,3 +90,25 @@ html.cx .carte,html.cx .kpi,html.cx .bandeau-budget,html.cx .hero{background:#ff
 #vue-dg .tab th,#vue-dg .tab td{hyphens:auto}
 #vue-dg .tab th{font-size:.7rem}
 #vue-dg .tab th.grp{text-align:center;border-bottom:1px solid var(--bord)}
+
+/* Reflux zoom 200 % et très petites largeurs : rien ne dépasse horizontalement */
+.carte,.grille,.champ-l,.semaine,.trajet,.etage,.barre-outils,li{min-width:0}
+.barre-outils>*{min-width:0;max-width:100%}
+p,.doux,.sim,.note-limite,.src,li,summary,.case-sem,.leg,.puce-etat{overflow-wrap:break-word}
+.src{overflow-wrap:anywhere}
+.grille>*{min-width:0;overflow-wrap:break-word}
+#vue-profil .tab{table-layout:fixed}
+#vue-profil .tab th,#vue-profil .tab td{overflow-wrap:break-word;hyphens:auto}
+#vue-carte select{max-width:100%}
+@media (max-width:480px){
+ .champ-l{flex-wrap:wrap}
+ .champ-l input[type=number],.champ-l input[type=time]{width:72px}
+ .champ-l .v{min-width:0}
+ .plage{flex-wrap:wrap}
+ .hm{width:4em}
+ .semaine{grid-template-columns:minmax(0,1fr)}
+ .case-sem>*{min-width:0}
+}
+.case-tete{flex-wrap:wrap}
+.case-tete>*{min-width:0}
+.puce-etat{white-space:normal;text-align:center}

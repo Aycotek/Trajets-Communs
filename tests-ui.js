@@ -85,6 +85,11 @@ fr.addEventListener("load",async()=>{await sleep(2500);if(window.__r2)return;win
   U(!/plus de 6 mois/.test(v().textContent),"tracés à jour : pas d'alerte d'expiration");
   const libres=[...d.querySelectorAll("input")].filter(i=>(i.type==="text"||i.type==="search")&&!i.classList.contains("hm"));
   U(libres.length===0,"aucun champ texte libre : surface d'injection réduite, données internes rendues via textContent");
+  const host=d.createElement("div"),payload="<img src=x onerror=window.__inj=1>";
+  const inj=W2.TCh("p",{text:payload});host.append(inj);d.body.append(host);
+  U(!W2.__inj&&host.querySelectorAll("img").length===0,"helper h() : chaîne hostile rendue inerte (aucun élément créé, aucun script)");
+  U(inj.textContent===payload,"helper h() : la chaîne est affichée telle quelle, comme texte");
+  host.remove();
   v().querySelector("#pt-deplace").dispatchEvent(new KeyboardEvent("keydown",{key:"ArrowLeft",bubbles:true}));U(true,"déplacement clavier sans erreur");
  }catch(e){U(false,"exception carte "+e.message+" @ "+(e.stack||"").split("\n")[1])}
  document.getElementById("res").textContent+="\n--- carte ---\n"+out2.join("\n")+"\n"+(f2?f2+" ECHEC(S) carte":"CARTE OK");
@@ -153,7 +158,12 @@ fr.addEventListener("load",async()=>{await sleep(9500);if(window.__r6)return;win
    d.querySelector('.onglets button[data-vue="'+vue+'"]').click();await sleep(200);
    const sw=d.documentElement.scrollWidth,iw=d.defaultView.innerWidth;
    V(sw<=iw,"onglet "+vue+" : pas de débordement horizontal à 320 px ("+sw+" <= "+iw+")");}
-  fr.style.width="390px";
+  fr.style.width="390px";d.body.style.zoom="200%";await sleep(250);
+  for(const vue of ["dg","semaine","trajets","carte","profil","controles","reglages","reel"]){
+   d.querySelector('.onglets button[data-vue="'+vue+'"]').click();await sleep(200);
+   const sw=d.documentElement.scrollWidth,iw=d.defaultView.innerWidth;
+   V(sw<=iw,"onglet "+vue+" : zoom 200 % sans débordement horizontal ("+sw+" <= "+iw+")");}
+  d.body.style.zoom="";
  }catch(e){V(false,"exception largeur "+e.message)}
  document.getElementById("res").textContent+="\n--- largeur 390px ---\n"+o.join("\n")+"\n"+(f6?f6+" ECHEC(S) largeur":"LARGEUR OK");
 });
