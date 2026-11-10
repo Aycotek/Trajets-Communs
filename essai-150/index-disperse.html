@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://data.geopf.fr; connect-src https://data.geopf.fr https://router.project-osrm.org; object-src 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="theme-color" content="#6b1d2c">
+<title>Essai 150 profils, journées complètes - Trajets Communs</title>
+<meta name="description" content="Démonstration de covoiturage domicile-travail avec données fictives : appariement, bilan CO2 et euros, contrôles anti-abus. Aucune donnée réelle.">
+<link rel="stylesheet" href="../base.css">
+<link rel="stylesheet" href="../extra.css">
+<link rel="stylesheet" href="../parcours.css">
+<link rel="stylesheet" href="../essai-leaflet/leaflet.css">
+<link rel="stylesheet" href="../essai-leaflet/leaflet-essai.css">
+<link rel="stylesheet" href="essai150.css">
+</head>
+<body>
+<div class="bandeau-essai" role="note"><p>Cas « domiciles dispersés » (150 profils inventés, mêmes personnes et mêmes règles que le cas de départ ; simulation, rien n'est envoyé). La version de référence reste <a href="../">ici</a>.</p><p><a href="index.html">Retour au cas de départ</a> (mêmes personnes et règles, domiciles plus groupés).</p><details><summary>Limites de cet essai</summary><p>Aucun seuil n'est adopté : le plafond de minutes conducteur est un paramètre de simulation (Réglages). Les durées sont précalculées, sans trafic. Le tracé routier d'un groupe est demandé à OSRM (serveur public de démonstration) quand on le sélectionne. Les personnes sans groupe n'ont aucun trajet proposé et aucun repli n'est défini.</p></details></div>
+<div class="fond-deco" aria-hidden="true"><i></i><i></i><i></i></div>
+<header class="entete">
+  <div class="marque"><svg class="logo" viewBox="0 0 48 48" role="img" aria-label="Logo Trajets Communs : une voiture partagée par deux personnes, dessinée d'un trait fin">
+    <defs><linearGradient id="lg-f" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8d2a3f"/><stop offset="1" stop-color="#3e0f19"/></linearGradient></defs>
+    <rect width="48" height="48" rx="14" fill="url(#lg-f)"/>
+    <path d="M8 29.5 V27.6 Q8 25.7 10.4 25.1 L14 24.3 L17.4 18.6 Q18.3 17.2 20 17 L28 17 Q29.7 17.2 30.6 18.6 L34 24.3 L37.6 25.1 Q40 25.7 40 27.6 V29.5" fill="none" stroke="#fff6e8" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M8 29.5 H40" fill="none" stroke="#fff6e8" stroke-width="2.3" stroke-linecap="round"/>
+    <circle cx="16" cy="32" r="3.1" fill="#4a1320" stroke="#fff6e8" stroke-width="2.1"/>
+    <circle cx="32" cy="32" r="3.1" fill="#4a1320" stroke="#fff6e8" stroke-width="2.1"/>
+    <circle cx="16" cy="32" r="1.1" fill="#e3b765"/>
+    <circle cx="32" cy="32" r="1.1" fill="#e3b765"/>
+    <circle cx="21.3" cy="21.3" r="1.8" fill="#e3b765"/>
+    <circle cx="26.7" cy="21.3" r="1.8" fill="#e3b765"/>
+  </svg><h1>Trajets Communs</h1></div>
+  <span class="etiq-demo" role="note">DÉMONSTRATION · données fictives · intégrations simulées</span>
+</header>
+<nav class="onglets onglets-large" role="tablist" aria-label="Sections">
+  <button data-vue="parcours" class="actif" role="tab">Mon trajet</button>
+  <button data-vue="carte" role="tab">Carte</button>
+  <button data-vue="semaine" role="tab">Quotidien</button>
+  <button data-vue="profil" role="tab">Profil</button>
+  <button data-vue="controles" role="tab">Contrôles</button>
+  <button data-vue="reglages" role="tab">Réglages</button>
+  <button data-vue="reel" role="tab">Réel</button>
+  <button data-vue="dg" role="tab">Direction</button>
+</nav>
+<main>
+  <section id="vue-parcours" class="vue actif"></section>
+  <section id="vue-carte" class="vue"></section>
+  <section id="vue-semaine" class="vue"></section>
+  <section id="vue-profil" class="vue"></section>
+  <section id="vue-controles" class="vue"></section>
+  <section id="vue-reglages" class="vue"></section>
+  <section id="vue-reel" class="vue"></section>
+  <section id="vue-dg" class="vue"></section>
+</main>
+<section id="resume150" aria-label="Bilan des journées simulées"></section>
+<footer class="pied">
+  <p>Aucun salarié réel, aucun domicile réel, aucune trace GPS réelle. Les profils portent des noms d'arbres. Le site d'arrivée, les gares et les centres de communes sont les seuls points réels. Les gains sont des estimations avec hypothèses visibles, pas des mesures. Aucune certification n'est revendiquée. Voir <a href="SOURCES.md">SOURCES.md</a> et <a href="SECURITE.md">SECURITE.md</a>.</p>
+</footer>
+<script src="../data.js"></script>
+<script src="params150.js"></script>
+<script src="route-data150d.js"></script>
+<script src="engine-v2.js"></script>
+<script src="population150d.js"></script>
+<script src="traces150.js"></script>
+<script src="app150.js"></script>
+<script src="../essai-leaflet/leaflet.js"></script>
+<script src="parcours150.js"></script>
+<script src="resume150.js"></script>
+</body>
+</html>

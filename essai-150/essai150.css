@@ -1,0 +1,3 @@
+/* Essai 150 : la carte garde une hauteur bornée (fenêtre carrée) quelle que soit la distance. */
+svg.carte-svg{display:block;width:100%;height:auto;aspect-ratio:1/1;max-height:68vh;margin:0 auto}
+.bandeau-essai details summary{cursor:pointer;font-weight:700}
