@@ -215,6 +215,7 @@ function vueCarte(){
  svg.append(sv("rect",{x:0,y:0,width:W,height:H,fill:"#efe6d6"}));
  const tx0=ox/256,ty0=oy/256;
  for(let i=0;i<nx;i++)for(let j=0;j<ny;j++)svg.append(sv("image",{href:"https://data.geopf.fr/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM_0_19&TILEMATRIX="+z+"&TILEROW="+(ty0+j)+"&TILECOL="+(tx0+i),x:i*256,y:j*256,width:256,height:256,opacity:".92"}));
+ svg.querySelectorAll("image").forEach(im=>{let n=0;im.addEventListener("error",()=>{if(n++<3){const u=im.getAttribute("href").replace(/&retry=\d+/,"");setTimeout(()=>im.setAttribute("href",u+"&retry="+n),700*n)}})});/* tuile refusée un instant par le service : nouvel essai (3 maximum), sinon fond beige */
  let tuilesOk=0;const noteTuiles=()=>{const n=el.querySelector("#tuiles-ko");if(!n)return;n.hidden=false;n.textContent=(tuilesOk>0?"Le fond de carte Plan IGN n'est que partiellement chargé : certaines tuiles manquent. ":"Le fond de carte Plan IGN n'a pas pu être chargé. ")+"Les tracés et la liste texte ci-dessous restent utilisables. En production, ce point est couvert par un fournisseur de tuiles sous contrat ou un hébergement propre."};
  svg.addEventListener("error",ev=>{if(ev.target&&ev.target.tagName==="image")noteTuiles()},true);
  svg.addEventListener("load",ev=>{if(ev.target&&ev.target.tagName==="image")tuilesOk++},true);
