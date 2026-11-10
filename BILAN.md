@@ -3,7 +3,7 @@
 État au 10 novembre 2026. Document de cadrage, sans engagement : aucun backend, aucun contrat, aucune authentification réelle n'a été lancé.
 
 ## Ce que la démonstration montre
-- Un calcul d'appariement déterministe et testé (1506 vérifications moteur, tests de parcours navigateur à chaque push via GitHub Actions).
+- Un calcul d'appariement déterministe et testé (3319 vérifications moteur, tests de parcours navigateur à chaque push via GitHub Actions).
 - Un parcours complet : proposer, accepter, refuser, revenir sur sa décision, retards et retraits simulés, récurrence explicite et non durable, gel des trajets confirmés ailleurs.
 - Une carte lisible au clavier et sans la couleur seule (rond = avec voiture, losange = sans voiture), avec équivalent texte, utilisable à 390 px de large.
 - Un bilan à trois niveaux jamais mélangés : potentiel estimé, déclaré, corroboré.

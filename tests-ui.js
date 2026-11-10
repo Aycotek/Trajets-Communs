@@ -88,3 +88,15 @@ fr.addEventListener("load",async()=>{await sleep(4500);const o=[];let f3=0;const
  }catch(e){V(false,"exception aléas "+e.message)}
  document.getElementById("res").textContent+="\n--- aléas ---\n"+o.join("\n")+"\n"+(f3?f3+" ECHEC(S) aléas":"ALÉAS OK");
 });
+
+/* Clavier : flèches entre onglets */
+fr.addEventListener("load",async()=>{await sleep(6000);const o=[];let f4=0;const V=(c,m)=>{o.push((c?"OK   ":"ECHEC ")+m);if(!c)f4++};
+ try{const d=fr.contentDocument,W=d.defaultView,tabs=[...d.querySelectorAll(".onglets button")];
+  tabs[0].focus();tabs[0].dispatchEvent(new W.KeyboardEvent("keydown",{key:"ArrowRight",bubbles:true,cancelable:true}));
+  V(d.querySelector(".onglets button.actif")===tabs[1],"flèche droite : onglet suivant actif");
+  V(d.activeElement===tabs[1],"le focus suit l'onglet");
+  tabs[1].dispatchEvent(new W.KeyboardEvent("keydown",{key:"ArrowLeft",bubbles:true,cancelable:true}));
+  V(d.querySelector(".onglets button.actif")===tabs[0],"flèche gauche : retour au premier onglet");
+  V(tabs[0].getAttribute("aria-selected")==="true"&&tabs[1].getAttribute("aria-selected")==="false","aria-selected à jour");
+ }catch(e){o.push("ECHEC exception clavier : "+e.message);f4++}
+ document.getElementById("res").textContent+="\n--- clavier ---\n"+o.join("\n")+"\n"+(f4?f4+" ECHEC(S) clavier":"CLAVIER OK");});

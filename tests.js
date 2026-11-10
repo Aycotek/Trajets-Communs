@@ -136,4 +136,8 @@ for(const seed of [2026,1,2,3,4,5]){
    if(t.ev.detour<0){negs++;const m2=Object.assign({},t.m);ok(t.m.detourCO2>=0,"un détour négatif ne crédite jamais de CO2");}
    ok(t.m.detourCO2>=0,"CO2 de détour jamais négatif");}}
  console.log("détours négatifs (route via arrêt plus courte en km que la directe) : "+negs+" sur 4 semaines, CO2 de détour mis à 0");}
+/* Unicité de placement : une personne dans un seul trajet par créneau, sur 10 graines */
+{for(const seed of [2026,1,2,3,4,5,6,7,8,9]){const po=E.population(28,seed),rr=E.match(po,E.defaults());
+ const seen=new Set();
+ for(const tr of rr.trips)for(const x of [tr.drv,...tr.pax]){const k=tr.day+tr.dir+"|"+x.id;ok(!seen.has(k),"aucun doublon "+k);seen.add(k)}}}
 console.log(n+" vérifications au total");

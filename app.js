@@ -37,7 +37,8 @@ function vueDG0(){
   h("div",{class:"grille"},
    kpi(rate(L.cor.n,L.dec.n),"des trajets déclarés corroborés (test)"),
    kpi(L.cor.people.size+" / "+present,"profils ayant fait au moins un trajet corroboré"),
-   kpi(L.cor.paxCarless,"places occupées par des profils sans voiture (corroborées)")
+   kpi(L.cor.paxCarless,"places occupées par des profils sans voiture (corroborées)"),
+   kpi(f1(S.res.trips.reduce((q,t)=>q+t.pax.length,0)/Math.max(1,S.res.trips.length)),"passagers par trajet proposé, en moyenne")
   )));
  const an=x=>x*w;
  el.append(h("div",{class:"carte"},
@@ -382,6 +383,13 @@ function vueReel(){
 
 function all(){vueSemaine();vueDG();vueTrajets();vueCarte();vueProfil();vueControles();vueReglages();vueReel()}
 document.querySelectorAll(".onglets button").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".onglets button").forEach(x=>x.classList.toggle("actif",x===b));document.querySelectorAll(".vue").forEach(v=>v.classList.toggle("actif",v.id==="vue-"+b.dataset.vue));window.scrollTo(0,0)}));
+{const tabs=[...document.querySelectorAll(".onglets button")];
+ const maj=()=>tabs.forEach(x=>x.setAttribute("aria-selected",x.classList.contains("actif")?"true":"false"));
+ tabs.forEach((b,i)=>{b.addEventListener("click",maj);
+  b.addEventListener("keydown",e=>{let j=null;const d={ArrowRight:1,ArrowLeft:-1}[e.key];
+   if(d!=null)j=(i+d+tabs.length)%tabs.length;else if(e.key==="Home")j=0;else if(e.key==="End")j=tabs.length-1;
+   if(j!=null){e.preventDefault();tabs[j].focus();tabs[j].click()}})});
+ maj();}
 recompute();all();
 const hv=(location.hash||"").slice(1);if(hv){const b=document.querySelector('.onglets button[data-vue="'+hv.replace(/[^a-z]/g,"")+'"]');if(b){b.click();const m=/-(\d+)$/.exec(location.hash);if(m&&hv.startsWith('carte')){S.carteSel=+m[1];vueCarte()}}}
 })();
