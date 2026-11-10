@@ -1,7 +1,7 @@
 (function(){
 "use strict";
 const D=window.TCDATA,E=window.TCENGINE;
-const S={p:E.defaults(),pop:E.population(28,2026),day:0,dir:"matin",avant:90,regleId:"capture",viewer:"dg",profil:"P01",scen:"conforme",res:null,bil:null,carteJour:0,carteDir:"matin",recur:{},alea:null,carteDz:0,moved:null};
+const S={p:E.defaults(),pop:E.population(28,2026),day:0,dir:"matin",avant:90,regleId:"capture",viewer:"dg",profil:"P01",scen:"conforme",res:null,bil:null,carteJour:0,carteDir:"matin",recur:{},alea:null,carteDz:0,moved:null,cartePers:null};
 const $=s=>document.querySelector(s);
 function h(tag,attrs,...kids){const e=document.createElement(tag);if(attrs)for(const k in attrs){if(k==="class")e.className=attrs[k];else if(k.startsWith("on"))e.addEventListener(k.slice(2),attrs[k]);else if(k==="text")e.textContent=attrs[k];else e.setAttribute(k,attrs[k])}
  kids.flat().forEach(c=>{if(c==null||c===false)return;e.append(c.nodeType?c:document.createTextNode(String(c)))});return e}
@@ -18,7 +18,7 @@ const byId=id=>S.pop.find(x=>x.id===id);
 try{S.dec=JSON.parse(sessionStorage.getItem("tc_dec")||"{}");S.recur=JSON.parse(sessionStorage.getItem("tc_rec")||"{}");S.out=JSON.parse(sessionStorage.getItem("tc_out")||"{}")}catch(_){S.dec={};S.recur={};S.out={}}
 S.dec=S.dec||{};S.recur=S.recur||{};S.out=S.out||{};
 try{if(sessionStorage.getItem("tc_cx")){S.cx=true;document.documentElement.classList.add("cx")}}catch(_){ }
-function refreshAll(){recompute();vueDG();vueTrajets();vueCarte();vueControles();vueProfil();vueSemaine()}
+function refreshAll(){recompute();vueDG();vueCarte();vueControles();vueProfil();vueSemaine()}
 function saveSim(){try{sessionStorage.setItem("tc_dec",JSON.stringify(S.dec));sessionStorage.setItem("tc_rec",JSON.stringify(S.recur));sessionStorage.setItem("tc_out",JSON.stringify(S.out))}catch(_){}}
 function recompute(){S.res=E.match(S.pop,S.p,undefined,S.out);S.bil=E.bilan(S.res.trips,S.p,undefined,S.dec)}
 function simBandeau(t){return h("div",{class:"sim",role:"note"},t)}
@@ -31,7 +31,7 @@ function vueDG0(){
  const present=S.pop.length;
  const rate=(a,b)=>b?Math.round(100*a/b)+" %":"-";
  el.append(h("details",{class:"carte"},h("summary",{text:"Comprendre la démonstration en une minute"}),
-  h("p",{text:"1. « Ma semaine » montre les propositions : votre accord seul ne confirme rien, le trajet n'est confirmé que quand tous ont accepté (ici, les autres sont simulés). 2. « Trajets » détaille conducteur, arrêts, horaires et détour. 3. « Carte » dessine les trajets sur un vrai fond OpenStreetMap, avec une liste texte équivalente. 4. « Profil » change horaires et congés, tout est recalculé aussitôt. 5. « Contrôles » montre comment un trajet déclaré serait vérifié, sans prouver une présence. 6. « Réglages » donne chaque hypothèse et sa source. 7. « Réel » liste ce qui reste à construire pour un vrai service. Tout est fictif : aucun compte, aucun paiement, aucune donnée réelle."})));
+  h("p",{text:"1. « Carte » est la page d'accueil : tous les collaborateurs fictifs y sont visibles et on y prépare les trajets, en voyant où sont les gens avant de décider. 2. « Quotidien » garde la routine : refaire le même trajet avec les mêmes partenaires (binôme ou trinôme), ou signaler un changement sans tout recommencer. Votre accord seul ne confirme rien : le trajet n'est confirmé que quand tous ont accepté (ici, les autres sont simulés). 3. « Profil » change horaires et congés, tout est recalculé aussitôt. 4. « Contrôles » montre comment un trajet déclaré serait vérifié, sans prouver une présence. 5. « Réglages » donne chaque hypothèse et sa source. 6. « Réel » liste ce qui reste à construire pour un vrai service. 7. « Direction », en dernier, regroupe les chiffres pour la direction : ce n'est pas la page d'accueil. Tout est fictif : aucun compte, aucun paiement, aucune donnée réelle."})));
  el.append(h("div",{class:"carte"},
   h("h2",{text:"Ce que la direction peut décider"}),
   h("p",{text:"Une semaine simulée pour "+present+" profils fictifs vers le site de Mont-Saint-Aignan. Chaque chiffre dit s'il est estimé, déclaré ou corroboré, et sur quelle hypothèse il repose."}),
@@ -77,29 +77,6 @@ function etage(rows){const max=Math.max(1,...rows.map(r=>r[3]));return h("div",{
 function kpi(v,l){return h("div",{class:"kpi"},h("b",{text:String(v)}),h("span",{text:l}))}
 function kpiN(v,l){return h("div",{class:"kpi"+(v<0?" neg":"")},h("b",{text:eur(v)}),h("span",{text:l}))}
 
-/* ---------- Trajets ---------- */
-function vueTrajets(){
- const el=$("#vue-trajets");el.replaceChildren();
- const bar=h("div",{class:"barre-outils"});
- E.JOURS.forEach((j,i)=>bar.append(h("button",{class:i===S.day?"actif":"",onclick:()=>{S.day=i;vueTrajets()},text:j})));
- ["matin","soir"].forEach(d=>bar.append(h("button",{class:d===S.dir?"actif":"",onclick:()=>{S.dir=d;vueTrajets()},text:d==="matin"?"Matin":"Soir"})));
- const vsel=h("select",{"aria-label":"Voir comme",onchange:e=>{S.viewer=e.target.value;vueTrajets()}},h("option",{value:"dg",text:"Vue direction (agrégée)"}),S.pop.map(x=>h("option",{value:x.id,text:"Voir comme "+x.nom})));vsel.value=S.viewer;
- const rsel=h("select",{"aria-label":"Règle d'identité",onchange:e=>{S.regleId=e.target.value;vueTrajets()}},h("option",{value:"capture",text:"Identités visibles à 30 min du départ"}),h("option",{value:"ouverte",text:"Identités visibles dès l'acceptation"}));rsel.value=S.regleId;
- const clock=h("input",{type:"range",min:0,max:180,step:5,value:S.avant,"aria-label":"Minutes avant le départ",oninput:e=>{S.avant=+e.target.value;lab.textContent="Il reste "+S.avant+" min avant le départ (horloge simulée)";renderList()}});
- const lab=h("span",{class:"doux",text:"Il reste "+S.avant+" min avant le départ (horloge simulée)"});
- el.append(h("div",{class:"carte"},h("h2",{text:"Trajets proposés"}),bar,h("div",{class:"barre-outils"},vsel,rsel),h("div",{class:"barre-outils"},clock),lab,
-  simBandeau("Règle des captures : avant 30 min les participants peuvent annuler et ne se connaissent pas ; ensuite le trajet est confirmé et les identités sont données. L'adresse exacte du domicile n'est montrée qu'au conducteur du trajet, après confirmation. Les deux variantes sont comparables ici : le choix reste à la direction."),
-  h("div",{id:"liste-trajets"})));
- function renderList(){
-  const box=$("#liste-trajets");box.replaceChildren();
-  const ts=S.res.trips.filter(t=>t.day===S.day&&t.dir===S.dir);
-  const idle=S.pop.filter(x=>x.jours[S.day].present&&!ts.some(t=>t.drv.id===x.id||t.pax.some(q=>q.id===x.id)));
-  if(!ts.length)box.append(h("p",{class:"doux",text:"Aucun trajet proposé ce jour et ce sens avec les réglages actuels."}));
-  ts.forEach(t=>box.append(carteTrajet(t)));
-  box.append(h("p",{class:"doux",text:idle.length+" profil(s) présent(s) sans trajet proposé ce jour et ce sens (aucun partenaire compatible avec les horaires, le détour maximal ou le temps en plus)."}));
- }
- renderList();
-}
 function carteTrajet(t){
  const viewer=S.viewer,isPart=viewer===t.drv.id||t.pax.some(x=>x.id===viewer);
  const verrou=S.avant<=30;
@@ -122,7 +99,67 @@ function carteTrajet(t){
   h("div",{class:"doux",text:"Distances et durées "+(S.p.routeReel&&window.TCROUTE?"routières précalculées (OSRM/OpenStreetMap, sans trafic)":"estimées à vol d'oiseau x "+S.p.detourFacteur)+"."}));
 }
 
-/* ---------- Carte : fond OpenStreetMap + tracés routiers précalculés ---------- */
+/* Préparation collective : préférences locales, jamais accords automatiques. */
+S.hab={};S.dem={};S.preview=null;
+try{S.hab=JSON.parse(sessionStorage.getItem("tc_hab")||"{}");S.dem=JSON.parse(sessionStorage.getItem("tc_dem")||"{}");if(!S.hab||Array.isArray(S.hab)||typeof S.hab!=="object")S.hab={};if(!S.dem||Array.isArray(S.dem)||typeof S.dem!=="object")S.dem={};for(const id of Object.keys(S.hab)){const g=S.hab[id];if(!g||!Array.isArray(g.ids)||g.ids.length<2||g.ids.some(i=>!byId(i))||!g.ids.includes(id)||!Number.isInteger(g.day)||g.day<0||g.day>4||!["matin","soir"].includes(g.dir))delete S.hab[id]}}catch(_){S.hab={};S.dem={}}
+function saveGroup(){try{sessionStorage.setItem("tc_hab",JSON.stringify(S.hab));sessionStorage.setItem("tc_dem",JSON.stringify(S.dem))}catch(_){}}
+function partenaires(uid,day,dir){
+ const x=byId(uid);if(!x||!x.jours[day].present)return [];
+ const others=S.pop.filter(q=>q.id!==uid&&q.jours[day].present).sort((a,b)=>E.hav(x.home,a.home)-E.hav(x.home,b.home));
+ const arr=[];
+ for(const y of others){const t=E.match([x,y],S.p).trips.find(t=>t.day===day&&t.dir===dir);if(t)arr.push(t)}
+ return arr;
+}
+function trinomes(uid,day,dir){
+ const x=byId(uid);if(!x||!x.jours[day].present)return [];
+ const others=S.pop.filter(q=>q.id!==uid&&q.jours[day].present);const arr=[];
+ for(let i=0;i<others.length;i++)for(let j=i+1;j<others.length;j++){
+ const t=E.match([x,others[i],others[j]],S.p).trips.find(t=>t.day===day&&t.dir===dir&&t.pax.length===2);if(t)arr.push(t)}
+ return arr.sort((a,b)=>a.ev.km-b.ev.km).slice(0,6);
+}
+function groupe(t){return [t.drv,...t.pax].map(q=>q.id).sort()}
+function ouvrirCarte(uid,day,dir,search){S.profil=uid;S.carteJour=day;S.carteDir=dir;S.carteSel=null;S.cartePers=uid;S.search=!!search;S.preview=null;if(!search&&S.hab[uid]){const g=S.hab[uid].ids.map(byId).filter(Boolean);S.preview=E.match(g,S.p).trips.find(t=>t.day===day&&t.dir===dir&&groupe(t).join()===S.hab[uid].ids.join())||null}vueCarte();document.querySelector('[data-vue="carte"]').click()}
+function choisirGroupe(t,uid){if(!groupe(t).includes(uid))return;S.hab[uid]={ids:groupe(t),day:t.day,dir:t.dir};delete S.dem[uid+t.day+t.dir];saveGroup();vueSemaine();vueCarte()}
+function panneauRecherche(uid,day,dir){
+ const x=byId(uid),cands=partenaires(uid,day,dir),hab=S.hab[uid];
+ const box=h("div",{class:"carte-detail"},h("h3",{text:"Préparer un trajet commun avec "+x.nom}),
+ h("p",{class:"doux",text:"Compatibilité calculée pour ce jour et ce sens : horaires, places, détour et temps en plus. Les propositions ci-dessous ne déplacent personne d'un trajet existant et ne valent aucun accord. Les distances entre domiciles servent seulement à classer les options."}));
+ box.append(h("div",{class:"barre-outils"},h("button",{onclick:()=>{S.trio=!S.trio;vueCarte()},text:S.trio?"Masquer les trinômes":"Chercher aussi un trinôme"})));
+ if(S.trio)cands.push(...trinomes(uid,day,dir));
+ const shown=S.search&&hab?cands.filter(t=>groupe(t).some(id=>!hab.ids.includes(id))):cands;
+ if(!shown.length)box.append(h("p",{text:"Aucun nouveau partenaire compatible dans ce jeu fictif pour ce créneau. Vous pouvez changer de jour ou modifier vos horaires dans Profil. Aucun trajet n'est promis."}));
+ shown.forEach((t,i)=>{const ys=[t.drv,...t.pax].filter(q=>q.id!==uid),y=ys[0];const b=h("div",{class:"trajet"},h("b",{text:ys.map(q=>q.nom+" · "+q.commune).join(" + ")}),h("p",{class:"doux",text:f1(E.hav(x.home,y.home))+" km entre domiciles à vol d'oiseau · départ "+E.hm(t.ev.depart)+" · détour conducteur "+f1(t.ev.detour)+" km"}),h("div",{class:"barre-outils"},h("button",{onclick:()=>{S.preview=t;S.cartePers=null;vueCarte()},text:t.pax.length===2?"Visualiser ce trinôme":"Visualiser ce binôme"})));box.append(b)});
+ if(S.preview)box.append(h("p",{text:"Proposition visualisée, pas réservée."}));
+ return box;
+}
+
+/* ---------- Décision d'un trajet depuis la carte (profil de démonstration) ---------- */
+function actionsCarte(t,day,dir){
+ const x=byId(S.profil),out0=S.out[slotK(day,dir,x.id)];
+ const part=t.drv.id===x.id||t.pax.some(q=>q.id===x.id);
+ const box=h("div",{class:"actions-carte"});
+ if(!part){
+  if(out0==="refuse"||out0==="annule"){
+   box.append(h("p",{class:"doux",text:x.nom+" (profil de démonstration) est retiré de ce créneau."}),
+    h("div",{class:"barre-outils"},h("button",{type:"button",id:"ca-rev",onclick:()=>rétablir(day,dir,x.id,"carte-choix"),text:"Revenir sur ma décision"})));
+  }else box.append(h("p",{class:"doux",text:"Ce trajet ne concerne pas "+x.nom+", le profil de démonstration (à changer dans Quotidien ou Profil). Pour préparer ses trajets, choisissez un trajet où il participe."}));
+  return box;
+ }
+ const e=etatCase(x,day,dir);
+ const bar=h("div",{class:"barre-outils"});
+ box.append(h("p",{class:"doux",text:"Décision pour "+x.nom+" (profil de démonstration). État du créneau : "+e.t+"."}));
+ const autresIds=[t.drv,...t.pax].filter(q=>q.id!==x.id).map(q=>q.id);
+ if(e.k==="prop")bar.append(h("button",{type:"button",id:"ca-acc",onclick:()=>accepter(t,[x.id],"carte-choix"),text:"Accepter ce trajet"}),
+  h("button",{type:"button",id:"ca-ref",onclick:()=>retirer(day,dir,x.id,"refuse","carte-choix"),text:"Refuser"}));
+ if(e.k==="att")bar.append(h("button",{type:"button",id:"ca-sim",onclick:()=>accepter(t,autresIds,"carte-choix"),text:"Simuler : les autres acceptent"}),
+  h("button",{type:"button",id:"ca-ret",onclick:()=>retirer(day,dir,x.id,"annule","carte-choix"),text:"Je ne peux plus faire ce trajet"}));
+ if(e.k==="conf")bar.append(h("button",{type:"button",id:"ca-ret",onclick:()=>retirer(day,dir,x.id,"annule","carte-choix"),text:"Je ne peux plus faire ce trajet"}));
+ if(bar.children.length)box.append(bar);
+ box.append(h("p",{class:"doux",text:"Même règle que dans Quotidien : votre accord seul ne confirme rien, rien n'est réservé ni payé, tout est simulé."}));
+ return box;
+}
+
+/* ---------- Carte : fond Plan IGN + tracés routiers précalculés ---------- */
 function mer(lat,lng,z){const n=256*Math.pow(2,z),r=Math.PI/180;return {x:(lng+180)/360*n,y:(1-Math.log(Math.tan(lat*r)+1/Math.cos(lat*r))/Math.PI)/2*n}}
 function deplacer(dn,de,focus){const m=S.moved;if(!m)return;m.lat+=dn*0.0018;m.lng+=de*0.0018/Math.cos(m.lat*Math.PI/180);vueCarte();if(focus){const n=document.getElementById(focus);if(n)n.focus()}}
 function panneauDeplace(){
@@ -142,12 +179,13 @@ function panneauDeplace(){
 function vueCarte(){
  const el=$("#vue-carte");el.replaceChildren();
  const bar=h("div",{class:"barre-outils"});
- E.JOURS.forEach((j,i)=>bar.append(h("button",{class:i===S.carteJour?"actif":"",onclick:()=>{S.carteJour=i;S.carteSel=null;S.carteDz=0;vueCarte()},text:j})));
- ["matin","soir"].forEach(d=>bar.append(h("button",{class:d===S.carteDir?"actif":"",onclick:()=>{S.carteDir=d;S.carteSel=null;S.carteDz=0;vueCarte()},text:d==="matin"?"Matin":"Soir"})));
+ E.JOURS.forEach((j,i)=>bar.append(h("button",{class:i===S.carteJour?"actif":"",onclick:()=>{S.preview=null;S.carteJour=i;S.carteSel=null;S.cartePers=null;S.carteDz=0;vueCarte()},text:j})));
+ ["matin","soir"].forEach(d=>bar.append(h("button",{class:d===S.carteDir?"actif":"",onclick:()=>{S.preview=null;S.carteDir=d;S.carteSel=null;S.cartePers=null;S.carteDz=0;vueCarte()},text:d==="matin"?"Matin":"Soir"})));
  const tsAll=S.res.trips.filter(t=>t.day===S.carteJour&&t.dir===S.carteDir);
- const sel=S.carteSel!=null&&tsAll[S.carteSel]?tsAll[S.carteSel]:null;
- const choix=h("select",{"aria-label":"Choisir un trajet à agrandir",onchange:e=>{S.carteSel=e.target.value===""?null:+e.target.value;S.carteDz=0;vueCarte()}},h("option",{value:"",text:"Tous les trajets"}),...tsAll.map((t,i)=>h("option",{value:String(i),text:"Zoom : "+t.drv.nom.replace("Profil ","")+" + "+t.pax.length+" passager(s), "+E.hm(t.ev.depart)+"-"+E.hm(t.ev.arrive)})));
+ const sel=S.preview||(S.carteSel!=null&&tsAll[S.carteSel]?tsAll[S.carteSel]:null);
+ const choix=h("select",{id:"carte-choix","aria-label":"Choisir un trajet à détailler",onchange:e=>{S.preview=null;S.carteSel=e.target.value===""?null:+e.target.value;S.carteDz=0;vueCarte()}},h("option",{value:"",text:"Tous les trajets"}),...tsAll.map((t,i)=>h("option",{value:String(i),text:"Zoom : "+t.drv.nom.replace("Profil ","")+" + "+t.pax.length+" passager(s), "+E.hm(t.ev.depart)+"-"+E.hm(t.ev.arrive)})));
  choix.value=sel?String(S.carteSel):"";bar.append(choix);
+ const person=h("select",{"aria-label":"Choisir un collaborateur",onchange:e=>{S.cartePers=e.target.value||null;if(S.cartePers)S.profil=S.cartePers;S.trio=false;S.search=true;S.preview=null;vueCarte()}},h("option",{value:"",text:"Trouver des partenaires pour…"}),...S.pop.map(q=>h("option",{value:q.id,text:q.nom+" · "+q.commune})));person.value=S.cartePers||"";bar.append(person);
  const zb=h("div",{class:"barre-outils",role:"group","aria-label":"Zoom de la carte"},
   h("button",{type:"button",id:"z-plus",...((S.carteDz||0)>=3?{disabled:true}:{}),"aria-label":"Zoom avant",onclick:()=>{S.carteDz=(S.carteDz||0)+1;vueCarte();document.getElementById("z-plus").focus()},text:"Zoom +"}),
   h("button",{type:"button",id:"z-moins",...((S.carteDz||0)<=-1?{disabled:true}:{}),"aria-label":"Zoom arrière",onclick:()=>{S.carteDz=(S.carteDz||0)-1;vueCarte();document.getElementById("z-moins").focus()},text:"Zoom −"}),
@@ -163,11 +201,11 @@ function vueCarte(){
  if(dz!==0){const zn=Math.max(9,Math.min(17,z+dz)),cm=mer((box.a+box.b)/2,(box.c+box.d)/2,zn);z=zn;ox=Math.floor((cm.x-384)/256)*256;oy=Math.floor((cm.y-384)/256)*256;nx=4;ny=4;W=1024;H=1024;Wv=768;vb=[cm.x-ox-384,cm.y-oy-384,768,768].map(v=>v.toFixed(1)).join(" ")}
  const P=q=>{const m=mer(q.lat,q.lng,z);return {x:m.x-ox,y:m.y-oy}};
  const f=Wv/420;
- const svg=sv("svg",{class:"carte-svg",viewBox:vb||("0 0 "+W+" "+H),role:"img","aria-label":"Carte OpenStreetMap avec domiciles fictifs, gares, site d'arrivée et tracés routiers"});
+ const svg=sv("svg",{class:"carte-svg",viewBox:vb||("0 0 "+W+" "+H),role:"img","aria-label":"Carte Plan IGN avec domiciles fictifs, gares, site d'arrivée et tracés routiers"});
  svg.append(sv("rect",{x:0,y:0,width:W,height:H,fill:"#efe6d6"}));
  const tx0=ox/256,ty0=oy/256;
- for(let i=0;i<nx;i++)for(let j=0;j<ny;j++)svg.append(sv("image",{href:"https://tile.openstreetmap.org/"+z+"/"+(tx0+i)+"/"+(ty0+j)+".png",x:i*256,y:j*256,width:256,height:256,opacity:".92"}));
- let tuilesOk=0;const noteTuiles=()=>{const n=el.querySelector("#tuiles-ko");if(!n)return;n.hidden=false;n.textContent=(tuilesOk>0?"Le fond de carte OpenStreetMap n'est que partiellement chargé : certaines tuiles manquent. ":"Le fond de carte OpenStreetMap n'a pas pu être chargé. ")+"Les tracés et la liste texte ci-dessous restent utilisables. En production, ce point est couvert par un fournisseur de tuiles sous contrat ou un hébergement propre."};
+ for(let i=0;i<nx;i++)for(let j=0;j<ny;j++)svg.append(sv("image",{href:"https://data.geopf.fr/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM_0_19&TILEMATRIX="+z+"&TILEROW="+(ty0+j)+"&TILECOL="+(tx0+i),x:i*256,y:j*256,width:256,height:256,opacity:".92"}));
+ let tuilesOk=0;const noteTuiles=()=>{const n=el.querySelector("#tuiles-ko");if(!n)return;n.hidden=false;n.textContent=(tuilesOk>0?"Le fond de carte Plan IGN n'est que partiellement chargé : certaines tuiles manquent. ":"Le fond de carte Plan IGN n'a pas pu être chargé. ")+"Les tracés et la liste texte ci-dessous restent utilisables. En production, ce point est couvert par un fournisseur de tuiles sous contrat ou un hébergement propre."};
  svg.addEventListener("error",ev=>{if(ev.target&&ev.target.tagName==="image")noteTuiles()},true);
  svg.addEventListener("load",ev=>{if(ev.target&&ev.target.tagName==="image")tuilesOk++},true);
  const R=window.TCROUTE,idx={};if(R)R.pts.forEach((q,i)=>{idx[q[0].toFixed(5)+","+q[1].toFixed(5)]=i});
@@ -179,17 +217,23 @@ function vueCarte(){
   const L=window.TCLEGS||{};const seq=t.ev.pts.map(q=>idx[kk(q)]);const legs=[];for(let q=0;q<seq.length-1;q++)legs.push(L[seq[q]+">"+seq[q+1]]);
   const complet=legs.length>0&&legs.every(Boolean);
   const geo=complet?[].concat(...legs):g;
+  const sel=()=>{S.carteSel=tsAll.indexOf(t);S.carteDz=0;S.moved=null;vueCarte();const n=document.getElementById("carte-choix");if(n)n.focus()};
   if(geo){if(complet)tracesReelles++;const path=geo.map(q=>{const a=P({lat:q[1],lng:q[0]});return a.x.toFixed(1)+","+a.y.toFixed(1)}).join(" ");
    svg.append(sv("polyline",{points:path,fill:"none",stroke:"#fff","stroke-width":6*f*.5,"stroke-linejoin":"round","stroke-opacity":".9"}));
-   svg.append(sv("polyline",{points:path,fill:"none",stroke:c,"stroke-width":3.4*f*.5,"stroke-linejoin":"round","stroke-dasharray":complet?"":"8 5"}))}
-  else{const path=t.ev.pts.map(q=>{const a=P(q);return a.x.toFixed(1)+","+a.y.toFixed(1)}).join(" ");svg.append(sv("polyline",{points:path,fill:"none",stroke:c,"stroke-width":3*f*.5,"stroke-dasharray":"6 4"}))}
-  t.pax.forEach(x=>{const a=P(x.mode==="gare"&&x.gare?x.gare:x.home);svg.append(sv("circle",{cx:a.x,cy:a.y,r:7*f*.85,fill:"#fff",stroke:c,"stroke-width":3*f*.85}))})});
+   const tr=sv("polyline",{points:path,fill:"none",stroke:c,"stroke-width":3.4*f*.5,"stroke-linejoin":"round","stroke-dasharray":complet?"":"8 5",class:"trace",tabindex:"-1"});
+   tr.addEventListener("click",sel);tr.append(sv("title",null,"Trajet de "+t.drv.nom+" : cliquer pour le détail"));svg.append(tr)}
+  else{const path=t.ev.pts.map(q=>{const a=P(q);return a.x.toFixed(1)+","+a.y.toFixed(1)}).join(" ");const tr=sv("polyline",{points:path,fill:"none",stroke:c,"stroke-width":3*f*.5,"stroke-dasharray":"6 4",class:"trace"});
+   tr.addEventListener("click",sel);tr.append(sv("title",null,"Trajet de "+t.drv.nom+" : cliquer pour le détail"));svg.append(tr)}
+  t.pax.forEach(x=>{const a=P(x.mode==="gare"&&x.gare?x.gare:x.home);const cc=sv("circle",{cx:a.x,cy:a.y,r:7*f*.85,fill:"#fff",stroke:c,"stroke-width":3*f*.85,class:"trace"});cc.addEventListener("click",sel);svg.append(cc)})});
  const inTrip=new Set();ts.forEach(t=>{inTrip.add(t.drv.id);t.pax.forEach(x=>inTrip.add(x.id))});
  S.pop.forEach(x=>{const a=P(x.home);const present=x.jours[S.carteJour].present;
   const r=(inTrip.has(x.id)?6:4.5)*f*.85,fill=!present?"#fff":x.aVoiture?"#6b1d2c":"#b9802f";
-  const at={fill,stroke:"#3e0f19","stroke-width":f*.4,"stroke-dasharray":present?"":"2 2","fill-opacity":inTrip.has(x.id)?1:.6};
-  if(x.aVoiture)svg.append(sv("circle",Object.assign({cx:a.x,cy:a.y,r},at)));
-  else{const q=r*1.15;svg.append(sv("polygon",Object.assign({points:[[a.x,a.y-q],[a.x+q,a.y],[a.x,a.y+q],[a.x-q,a.y]].map(p=>p.join(",")).join(" ")},at)))}});
+  const at={fill,stroke:"#3e0f19","stroke-width":f*.4,"stroke-dasharray":present?"":"2 2","fill-opacity":inTrip.has(x.id)?1:.6,class:"domi"};
+  const mk=x.aVoiture?sv("circle",Object.assign({cx:a.x,cy:a.y,r},at))
+   :sv("polygon",Object.assign({points:(q=>[[a.x,a.y-q],[a.x+q,a.y],[a.x,a.y+q],[a.x-q,a.y]])(r*1.15).map(p=>p.join(",")).join(" ")},at));
+  mk.append(sv("title",null,x.nom+" : cliquer pour voir ses trajets"));
+  mk.addEventListener("click",()=>{S.cartePers=x.id;vueCarte();const n=document.getElementById("panneau-pers");if(n)n.focus()});
+  svg.append(mk)});
  D.GARES.forEach(g=>{const a=P(g);const r=6*f*.85;svg.append(sv("rect",{x:a.x-r,y:a.y-r,width:2*r,height:2*r,fill:"#2d5a8a",stroke:"#fff","stroke-width":f*.3}));svg.append(sv("text",{x:a.x+r+3,y:a.y+4,"font-size":11*f*.85,fill:"#1f3e60",stroke:"#fff","stroke-width":f*.8,"paint-order":"stroke"},g.nom))});
  const s0=P(D.SITE),r0=9*f*.85;
  svg.append(sv("polygon",{points:[[s0.x,s0.y-r0*1.6],[s0.x+r0*1.4,s0.y+r0],[s0.x-r0*1.4,s0.y+r0]].map(q=>q.join(",")).join(" "),fill:"#3e0f19",stroke:"#fff","stroke-width":f*.4}));
@@ -202,13 +246,51 @@ function vueCarte(){
   mk.addEventListener("pointerdown",ev=>{mk.setPointerCapture(ev.pointerId);mk.dataset.drag="1"});
   mk.addEventListener("pointermove",ev=>{if(!mk.dataset.drag)return;const m=svg.getScreenCTM().inverse(),pt=svg.createSVGPoint();pt.x=ev.clientX;pt.y=ev.clientY;const q=pt.matrixTransform(m);mk.setAttribute("cx",q.x);mk.setAttribute("cy",q.y);mk.dataset.x=q.x;mk.dataset.y=q.y});
   mk.addEventListener("pointerup",()=>{if(!mk.dataset.drag)return;delete mk.dataset.drag;if(mk.dataset.x){const px=+mk.dataset.x+ox,py=+mk.dataset.y+oy,n=256*Math.pow(2,z),lng=px/n*360-180,lat=Math.atan(Math.sinh(Math.PI*(1-2*py/n)))*180/Math.PI;S.moved.lat=lat;S.moved.lng=lng;vueCarte()}});}
- svg.append(sv("text",{x:W-4,y:H-5,"font-size":8*f*.85,"text-anchor":"end",fill:"#333",stroke:"#fff","stroke-width":f*.5,"paint-order":"stroke"},"© contributeurs OpenStreetMap"));
+ svg.append(sv("text",{x:W-4,y:H-5,"font-size":8*f*.85,"text-anchor":"end",fill:"#333",stroke:"#fff","stroke-width":f*.5,"paint-order":"stroke"},"© IGN · Plan IGN · Licence Ouverte"));
  const ageJ=R&&R.date?Math.floor((Date.now()-new Date(R.date+"T00:00:00Z").getTime())/864e5):0;
- el.append(h("div",{class:"carte"},h("h2",{text:"Carte des trajets"}),bar,zb,svg,
-  h("p",{id:"tuiles-ko",class:"note-limite",hidden:"",text:"Le fond de carte OpenStreetMap n'a pas pu être chargé. Les tracés et la liste texte ci-dessous restent utilisables. En production, ce point est couvert par un fournisseur de tuiles sous contrat ou un hébergement propre."}),
+ el.append(h("div",{class:"carte"},h("h2",{text:"Carte des trajets"}),
+  h("p",{class:"doux",text:"Page d'accueil : l'ensemble des "+S.pop.length+" collaborateurs fictifs est visible (ronds : avec voiture, losanges : sans voiture, pointillés : absents ce jour). Choisissez un trajet (tracé coloré) ou une personne (rond, losange) sur la carte, ou dans la liste, pour voir le détail et décider."}),bar,zb,svg,
+  h("p",{id:"tuiles-ko",class:"note-limite",hidden:"",text:"Le fond de carte Plan IGN n'a pas pu être chargé. Les tracés et la liste texte ci-dessous restent utilisables. En production, ce point est couvert par un fournisseur de tuiles sous contrat ou un hébergement propre."}),
   h("div",{class:"leg"},h("span",null,h("i",{class:"d1"}),"rond : avec voiture"),h("span",null,h("i",{class:"d2 los"}),"losange : sans voiture"),h("span",{text:"carré bleu : gare · cercle blanc cerclé : prise en charge · pointillé : absent ce jour"})),
-  h("p",{class:"doux",text:"Fond : OpenStreetMap (© contributeurs, ODbL), chargé depuis tile.openstreetmap.org. Tracés : itinéraire routier du conducteur vers le site, précalculé le "+(R?R.date:"?")+" (OSRM, sans trafic)."+(ageJ>183?" Attention : tracés vieux de "+ageJ+" jours (plus de 6 mois) : à recalculer avant tout usage réel.":"")+" Trajets à plusieurs : conducteur, prises en charge puis site, tracés sur les routes quand les tronçons sont précalculés, sinon en pointillé : "+tracesReelles+" trajet(s) tracé(s) sur "+ts.length+"."}),
-  simBandeau("Domiciles inventés (calés sur la route la plus proche pour le calcul). Données OpenStreetMap libres (ODbL), mais le serveur public de tuiles est limité à un usage léger : pour un déploiement, tuiles auto-hébergées ou fournisseur dont les conditions conviennent. Important : en affichant la carte, votre navigateur envoie votre adresse IP et la zone affichée au serveur de tuiles OpenStreetMap. Ce sont des données réelles du visiteur, même si tous les profils sont inventés. Les tracés viennent d'un précalcul ponctuel sur le serveur de démonstration OSRM (sans garantie, ne convient pas à un produit). Détail dans SOURCES.md.")));
+  h("p",{class:"doux",text:"Fond : © IGN, Plan IGN en flux (mise à jour continue), Licence Ouverte 2.0, chargé depuis data.geopf.fr. Tracés : itinéraire routier du conducteur vers le site, précalculé le "+(R?R.date:"?")+" (OSRM, sans trafic)."+(ageJ>183?" Attention : tracés vieux de "+ageJ+" jours (plus de 6 mois) : à recalculer avant tout usage réel.":"")+" Trajets à plusieurs : conducteur, prises en charge puis site, tracés sur les routes quand les tronçons sont précalculés, sinon en pointillé : "+tracesReelles+" trajet(s) tracé(s) sur "+ts.length+"."}),
+  simBandeau("Domiciles inventés (calés sur la route la plus proche pour le calcul). Fond Plan IGN sous Licence Ouverte, service public Géoplateforme sans garantie de continuité. Important : en affichant la carte, votre navigateur envoie votre adresse IP et la zone affichée au serveur de tuiles IGN. Ce sont des données réelles du visiteur, même si tous les profils sont inventés. Les tracés viennent d'un précalcul ponctuel sur le serveur de démonstration OSRM (sans garantie, ne convient pas à un produit). Détail dans SOURCES.md.")));
+ el.querySelector(".carte").append(h("p",{class:"doux"},h("a",{href:"https://cartes.gouv.fr/rechercher-une-donnee/dataset/IGNF_PLAN-IGN",text:"Source et métadonnées Plan IGN (IGN, flux mis à jour en continu)"})," · ",h("a",{href:"https://www.etalab.gouv.fr/licence-ouverte-open-licence/",text:"Licence Ouverte 2.0"})));
+ if(S.cartePers&&byId(S.cartePers)){
+  const px=byId(S.cartePers),pj=px.jours[S.carteJour];
+  const pt=S.res.trips.find(t=>t.day===S.carteJour&&t.dir===S.carteDir&&(t.drv.id===px.id||t.pax.some(q=>q.id===px.id)));
+  const pan=h("div",{class:"carte-detail",id:"panneau-pers",tabindex:"-1"},h("h3",{text:px.nom+" (fictif)"}),
+   h("p",{class:"doux",text:px.commune+", "+(px.aVoiture?(px.role==="flexible"?"a une voiture et accepte d'alterner":"a une voiture et conduit"):"n'a pas de voiture")+(px.mode==="gare"?", arrive par la gare "+px.gare.nom:", prise en charge à domicile")+". "+(pj.present?"Présent ce jour.":"En congé ou absent ce jour.")}));
+  if(pt){const idx=tsAll.indexOf(pt);
+   pan.append(h("p",{text:"Trajet proposé "+E.JOURS[S.carteJour].toLowerCase()+" "+S.carteDir+" : "+(pt.drv.id===px.id?"conducteur":"passager")+", départ "+E.hm(pt.ev.depart)+", arrivée "+E.hm(pt.ev.arrive)+", "+(pt.pax.length)+" passager(s)."+(pt.drv.id!==px.id?" Conducteur : "+pt.drv.nom+" (fictif).":"")}),
+    h("div",{class:"barre-outils"},h("button",{type:"button",id:"pers-voir",onclick:()=>{S.carteSel=idx;S.carteDz=0;S.cartePers=null;vueCarte();const n=document.getElementById("carte-choix");if(n)n.focus()},text:"Voir le détail de ce trajet"})));
+  }else if(pj.present){
+   pan.append(h("p",{class:"doux",text:"Aucun partenaire compatible ce jour et ce sens (horaires, détour maximal, temps en plus). Rien n'est proposé pour cette personne et aucun repli (taxi, prise en charge par l'entreprise) n'est promis."}));
+  }
+  pan.append(h("div",{class:"barre-outils"},h("button",{type:"button",id:"pers-fermer",onclick:()=>{S.cartePers=null;vueCarte()},text:"Fermer"})));
+  pan.append(h("div",{class:"barre-outils"},h("button",{onclick:()=>{S.profil=px.id;S.search=true;vueCarte()},text:"Chercher des partenaires compatibles"})));
+  el.querySelector(".carte").append(pan);
+  if(S.dem[px.id+S.carteJour+S.carteDir])pan.append(h("p",{class:"sim",text:"En demande de nouveau partenaire (session fictive, aucun message envoyé)."}));
+  if(S.search)el.querySelector(".carte").append(panneauRecherche(px.id,S.carteJour,S.carteDir));
+ }
+ if(sel){
+  const vsel=h("select",{"aria-label":"Voir comme",onchange:e=>{S.viewer=e.target.value;vueCarte()}},h("option",{value:"dg",text:"Vue direction (agrégée)"}),S.pop.map(x=>h("option",{value:x.id,text:"Voir comme "+x.nom})));vsel.value=S.viewer;
+  const rsel=h("select",{"aria-label":"Règle d'identité",onchange:e=>{S.regleId=e.target.value;vueCarte()}},h("option",{value:"capture",text:"Identités visibles à 30 min du départ"}),h("option",{value:"ouverte",text:"Identités visibles dès l'acceptation"}));rsel.value=S.regleId;
+  const lab=h("span",{class:"doux",text:"Il reste "+S.avant+" min avant le départ (horloge simulée)"});
+  const clock=h("input",{type:"range",min:0,max:180,step:5,value:S.avant,"aria-label":"Minutes avant le départ",oninput:e=>{S.avant=+e.target.value;lab.textContent="Il reste "+S.avant+" min avant le départ (horloge simulée)";detTrajet()}});
+  const det=h("div",{class:"carte-detail"},h("h3",{text:"Détail du trajet choisi"}),
+   h("div",{class:"barre-outils"},vsel,rsel),
+   h("div",{class:"barre-outils"},clock),lab,
+   simBandeau("Règle des captures : avant 30 min les participants peuvent annuler et ne se connaissent pas ; ensuite le trajet est confirmé et les identités sont données. L'adresse exacte du domicile n'est montrée qu'au conducteur du trajet, après confirmation. Les deux variantes sont comparables ici : le choix reste à la direction."),
+   h("div",{id:"detail-trajet"}));
+  el.querySelector(".carte").append(det);
+  detTrajet();
+ }else{
+  el.querySelector(".carte").append(h("p",{class:"doux",text:"Aucun trajet sélectionné : cliquez un tracé coloré ou un point de prise en charge pour un trajet, un rond ou un losange pour voir les trajets d'une personne, ou choisissez dans « Choisir un trajet à détailler »."}));
+ }
+ function detTrajet(){const b=$("#detail-trajet");if(!b)return;
+ if(S.preview){b.replaceChildren(h("div",{class:"sim",text:"Préparation fictive : "+[sel.drv,...sel.pax].map(q=>q.nom).join(" + ")+". Ce groupe n'est pas réservé. Aucun accord existant n'est changé et aucun gain n'est ajouté au bilan."}),h("p",{text:"Départ "+E.hm(sel.ev.depart)+", arrivée "+E.hm(sel.ev.arrive)+", "+f1(sel.ev.km)+" km, détour "+f1(sel.ev.detour)+" km."}),h("div",{class:"barre-outils"},h("button",{onclick:()=>choisirGroupe(sel,S.profil),text:sel.pax.length===2?"Garder ce trinôme comme groupe habituel (simulation)":"Garder ce binôme comme groupe habituel (simulation)"}),h("button",{onclick:()=>{S.preview=null;S.cartePers=S.profil;vueCarte()},text:"Revenir aux partenaires"})));return}
+ b.replaceChildren(carteTrajet(sel),actionsCarte(sel,S.carteJour,S.carteDir),h("div",{class:"barre-outils"},groupe(sel).includes(S.profil)?h("button",{onclick:()=>choisirGroupe(sel,S.profil),text:"Garder ce groupe habituel (simulation)"}):h("span",{class:"doux",text:"Choisissez un profil de ce groupe pour le garder comme habitude."})))
+ }
  el.querySelector(".carte").append(panneauDeplace());
  const i1=el.querySelector(".leg i.d1"),i2=el.querySelector(".leg i.d2");i1.style.background="#6b1d2c";i2.style.background="#b9802f";
  const liste=h("ol",{class:"liste-carte"},ts.map(t=>h("li",null,h("b",{text:t.drv.nom}),(" conduit : "+t.ev.pts.slice(0,-1).length+" arrêt(s) avant le site, départ "+E.hm(t.ev.depart)+", arrivée "+E.hm(t.ev.arrive)+", "+f1(t.ev.km)+" km, détour "+f1(t.ev.detour)+" km. Passagers : "+t.pax.map(x=>x.nom+(x.mode==="gare"?" (gare "+x.gare.nom+")":" (domicile)")).join(", ")+"."))));
@@ -249,14 +331,14 @@ function vueProfil(){
   h("p",null,h("b",{text:x.nom}),", "+x.commune+", "+(x.aVoiture?(x.role==="flexible"?"a une voiture et accepte d'alterner":"a une voiture et conduit"):"n'a pas de voiture")+(x.mode==="gare"?", arrive par la gare "+x.gare.nom:", prise en charge à domicile")),
   h("p",{class:"doux",text:"Adresse fictive : "+x.adresse}),
   tbl,
-  h("p",{class:"doux",text:"Les heures se saisissent au format 24 heures (par exemple 07:30 ou 7h30). Chaque changement relance l'appariement : décale une plage ou pose un congé, puis regarde l'onglet Trajets."}),
+  h("p",{class:"doux",text:"Les heures se saisissent au format 24 heures (par exemple 07:30 ou 7h30). Chaque changement relance l'appariement : décale une plage ou pose un congé, puis regarde les onglets Carte et Quotidien."}),
   h("div",{id:"mes-trajets"})));
  function mes(){const box=$("#mes-trajets");box.replaceChildren();
   const ts=S.res.trips.filter(t=>t.drv.id===x.id||t.pax.some(q=>q.id===x.id));
   box.append(h("h3",{text:"Trajets proposés cette semaine : "+ts.length}));
   ts.forEach(t=>box.append(h("div",{class:"doux",text:E.JOURS[t.day]+" "+t.dir+" : "+(t.drv.id===x.id?"conducteur":"passager")+", départ "+E.hm(t.ev.depart)+", arrivée "+E.hm(t.ev.arrive)})));}
  mes();
- function refresh(){recompute();mes();vueDG();vueTrajets();vueCarte();vueControles();vueSemaine()}
+ function refresh(){recompute();mes();vueDG();vueCarte();vueControles();vueSemaine()}
 }
 
 
@@ -295,6 +377,16 @@ function vueSemaine(){
  const el=$("#vue-semaine");el.replaceChildren();
  const x=byId(S.profil);
  const sel=h("select",{"aria-label":"Profil",onchange:e=>{S.profil=e.target.value;S.alea=null;vueSemaine()}},S.pop.map(q=>h("option",{value:q.id,text:q.nom+" ("+q.role+")"})));sel.value=S.profil;
+ const habit=S.hab[x.id],hd=habit?habit.day:0,hr=habit?habit.dir:"matin";
+ const routine=h("div",{class:"trajet quotidien-simple"},h("h3",{text:"Votre groupe habituel"}));
+ if(habit){
+  const people=habit.ids.map(byId).filter(Boolean);
+  routine.append(h("p",{text:people.map(q=>q.nom).join(" + ")+" · "+(people.length===2?"binôme":people.length===3?"trinôme":"groupe")}));
+  const curr=S.res.trips.find(t=>t.day===hd&&t.dir===hr&&groupe(t).join()===habit.ids.join());
+  routine.append(h("p",{class:"sim",text:"Préférence locale pour "+E.JOURS[hd]+" "+hr+", gardée seulement pendant cet onglet. Pas un accord des autres ni une réservation répétée. "+(curr?"Le groupe correspond à une proposition actuelle, à accepter séparément.":"Ce groupe n'est pas la proposition actuelle. Aucun ancien accord n'est réutilisé.")}));
+  routine.append(h("div",{class:"barre-outils"},h("button",{onclick:()=>ouvrirCarte(x.id,hd,hr,false),text:"Refaire avec mon groupe habituel"}),h("button",{onclick:()=>{retirer(hd,hr,x.id,"annule");},text:"Pas ce trajet pour ce créneau"}),h("button",{onclick:()=>{S.dem[x.id+hd+hr]=true;saveGroup();ouvrirCarte(x.id,hd,hr,true)},text:"Je cherche un nouveau partenaire"})));
+ }else routine.append(h("p",{text:"Aucun groupe habituel choisi. Sur la carte, choisissez un profil et cherchez ses partenaires, puis gardez le binôme ou le groupe qui vous convient."}),h("div",{class:"barre-outils"},h("button",{onclick:()=>ouvrirCarte(x.id,0,"matin",true),text:"Trouver mon binôme ou trinôme sur la carte"})));
+ const demands=Object.keys(S.dem).filter(k=>k.startsWith(x.id));if(demands.length)routine.append(h("p",{role:"status",class:"sim",text:"Demande de nouveau partenaire enregistrée dans cette session uniquement. Visible sur la carte pour ce profil ; aucun message réel n'est envoyé et personne n'est réservé."}));
  const grille=h("div",{class:"semaine",role:"list"});
  E.JOURS.forEach((jn,day)=>["matin","soir"].forEach(dir=>{
   const e=etatCase(x,day,dir),key=day+dir,idb="b-"+key;
@@ -314,7 +406,7 @@ function vueSemaine(){
   if(t){
    const role=t.drv.id===x.id?"conducteur":"passager",rk=E.tripKey(t)+"#"+x.id;
    ligne.append(h("div",null,"Vous seriez "+role+" : départ "+E.hm(t.ev.depart)+(dir==="matin"?", arrivée au site ":", arrivée ")+E.hm(t.ev.arrive)+", "+f1(t.ev.km)+" km, "+(t.pax.length)+" passager(s), "+f1(t.ev.detour)+" km de détour conducteur."));
-   if(role==="passager"){const me=t.pax.find(q=>q.id===x.id);ligne.append(h("div",null,"Point de prise en charge : "+(me.mode==="gare"?"gare "+me.gare.nom:"votre domicile (adresse fictive, connue du conducteur après confirmation)")+". Conducteur : profil fictif, identité selon la règle de l'onglet Trajets."))}
+   if(role==="passager"){const me=t.pax.find(q=>q.id===x.id);ligne.append(h("div",null,"Point de prise en charge : "+(me.mode==="gare"?"gare "+me.gare.nom:"votre domicile (adresse fictive, connue du conducteur après confirmation)")+". Conducteur : profil fictif, identité selon la règle de l'onglet Carte."))}
    else ligne.append(h("div",null,"Passagers : "+t.pax.map(q=>q.mode==="gare"?"gare "+q.gare.nom:"domicile d'un passager (adresse après confirmation)").join(" ; ")+"."));
    const autresIds=[t.drv,...t.pax].filter(q=>q.id!==x.id).map(q=>q.id);
    if(e.k==="prop"){
@@ -341,11 +433,11 @@ function vueSemaine(){
   }
   if(bar.children.length)ligne.append(bar);
   grille.append(ligne)}));
- el.append(h("div",{class:"carte"},h("h2",{text:"Ma semaine"}),
-  h("div",{class:"sim",role:"note"},"Démonstration : rien n'est accepté, réservé ni payé à votre place. Les autres participants sont fictifs et simulés, aucun message réel n'est envoyé.",h("details",null,h("summary",{text:"Détails"}),h("p",{text:"La semaine est proposée à l'avance à partir du profil ; vous acceptez ou refusez chaque trajet. Vos choix ne sont gardés que dans cet onglet (sessionStorage), rien n'est durable."}))),
+ el.append(h("div",{class:"carte"},h("h2",{text:"Mon quotidien"}),routine,
+  h("div",{class:"sim",role:"note"},"Démonstration : rien n'est accepté, réservé ni payé à votre place. Les autres participants sont fictifs et simulés, aucun message réel n'est envoyé.",h("details",null,h("summary",{text:"Détails"}),h("p",{text:"La semaine est proposée à l'avance à partir du profil ; vous acceptez ou refusez chaque trajet. La routine se garde sans tout recommencer : un créneau confirmé peut être demandé chaque semaine (récurrence non durable ici), avec le même binôme ou trinôme ; un changement se signale sur le créneau seul. Vos choix ne sont gardés que dans cet onglet (sessionStorage), rien n'est durable."}))),
   h("div",{class:"barre-outils"},sel,(()=>{const b=h("button",{type:"button",text:"Effacer mes choix simulés"});
    b.addEventListener("click",()=>{
-    if(b.dataset.arm){S.dec={};S.recur={};S.out={};saveSim();S.alea=null;refreshAll();return}
+    if(b.dataset.arm){S.dec={};S.recur={};S.out={};S.hab={};S.dem={};S.preview=null;saveGroup();saveSim();S.alea=null;refreshAll();return}
     b.dataset.arm="1";b.textContent="Confirmer l'effacement de tous les choix simulés ?";
     const ann=h("button",{type:"button",text:"Annuler"});
     const fin=()=>{delete b.dataset.arm;b.textContent="Effacer mes choix simulés";ann.remove()};
@@ -375,7 +467,7 @@ function vueControles(){
   h("div",{class:"grille"},kpi(cnt["corroboré"],"corroborés"),kpi(cnt["à vérifier"],"à vérifier par un humain"),kpi(cnt["rejeté"],"rejetés")),
   h("div",{class:"note-limite",text:"Limites assumées : le binôme qui s'entend pour déclarer des trajets réels mais non nécessaires, ou qui gonfle la valeur d'un trajet, reste difficile à voir avec des traces seules. Réponses : peu d'argent par trajet, plafonds, audit par échantillon, comparaison avec les badgeages d'accès et la présence déclarée, suppression du compte en cas d'abus. Un signal vu dans la presse régionale : des primes versées sans passager réel sur une plateforme grand public. Sources dans SOURCES.md."})));
  const th=h("div",{class:"carte"},h("h3",{text:"Seuils des règles"}),h("p",{class:"doux",text:"Chaque seuil est un choix à valider avec la direction. Le Registre de preuve de covoiturage applique par exemple : rejet au-delà de 4 trajets par personne et par jour, et au-delà de 70 % de chevauchement entre deux trajets d'un même passager."}));
- D.REGLES.forEach(x=>th.append(champ(x.l,S.p[x.k],x.step||1,0,x.k==="vmax"?300:x.k==="rayonM"?2000:x.k==="tolMin"?60:x.k==="maxJour"?10:x.k==="binomeSem"?20:3,v=>{S.p[x.k]=v;recompute();vueDG();vueTrajets();vueCarte();vueControles()},"Seuil de démonstration.")));
+ D.REGLES.forEach(x=>th.append(champ(x.l,S.p[x.k],x.step||1,0,x.k==="vmax"?300:x.k==="rayonM"?2000:x.k==="tolMin"?60:x.k==="maxJour"?10:x.k==="binomeSem"?20:3,v=>{S.p[x.k]=v;recompute();vueDG();vueCarte();vueControles()},"Seuil de démonstration.")));
  el.append(th);
 }
 
@@ -391,8 +483,8 @@ function vueReglages(){
  const cx=h("input",{type:"checkbox",id:"cx-case"});cx.checked=!!S.cx;
  cx.addEventListener("change",()=>{S.cx=cx.checked;document.documentElement.classList.toggle("cx",S.cx);try{sessionStorage.setItem("tc_cx",S.cx?"1":"")}catch(_){};});
  c.append(h("label",{class:"ligne-cx"},cx,"Contraste renforcé : textes et bordures plus marqués, décor retiré (mémorisé le temps de la session)"));
- D.PARAMS.forEach(x=>c.append(champ(x.l,S.p[x.k],x.step,x.min,x.max,v=>{S.p[x.k]=v;recompute();vueDG();vueTrajets();vueCarte();vueControles();vueProfil();vueSemaine()},x.src)));
- const exporter=()=>{const etat={demonstration:true,avertissement:"État fictif de démonstration : profils, adresses, choix et traces sont inventés, aucune donnée réelle ni interne.",exporteLe:new Date().toISOString(),choixSimules:S.dec,recurrences:S.recur,tracesDeTest:S.out};
+ D.PARAMS.forEach(x=>c.append(champ(x.l,S.p[x.k],x.step,x.min,x.max,v=>{S.p[x.k]=v;recompute();vueDG();vueCarte();vueControles();vueProfil();vueSemaine()},x.src)));
+ const exporter=()=>{const etat={demonstration:true,avertissement:"État fictif de démonstration : profils, adresses, choix et traces sont inventés, aucune donnée réelle ni interne.",exporteLe:new Date().toISOString(),choixSimules:S.dec,recurrences:S.recur,tracesDeTest:S.out,groupesHabituels:S.hab,demandesPartenaire:S.dem};
   const blob=new Blob([JSON.stringify(etat,null,1)],{type:"application/json"});const u=URL.createObjectURL(blob);
   const a=h("a",{href:u,download:"trajets-communs-etat-simule.json"});document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)};
  c.append(h("div",{class:"barre-outils"},h("button",{onclick:()=>{S.p=E.defaults();recompute();all()},text:"Revenir aux valeurs initiales"}),
@@ -417,10 +509,10 @@ function vueReel(){
  ];
  el.append(h("div",{class:"carte"},h("h2",{text:"Ce qui reste à faire pour le réel"}),h("p",{text:"Cette démonstration montre le calcul et l'expérience. Elle ne remplace pas un déploiement : voici ce qui n'est pas fait."}),
   h("ul",{class:"statuts"},rows.map(r=>h("li",null,h("b",{text:r[0]+" : "}),h("span",{class:r[1]==="non"||r[1]==="jamais revendiquée"?"s-non":"s-sim",text:r[1]}),h("div",{class:"doux",text:r[2]})))),
-  h("p",{class:"doux",text:"Sécurité de cette page : aucune requête externe, aucun cookie, aucune donnée saisie envoyée, politique de sécurité de contenu stricte. Détail dans SECURITE.md."})));
+  h("p",{class:"doux",text:"Sécurité de cette page : aucun compte ni donnée saisie transmis ; le fond Plan IGN appelle data.geopf.fr et lui transmet IP et zone affichée. Aucun cookie applicatif ; politique de sécurité de contenu limitée aux ressources de la démo et au fond IGN. Détail dans SECURITE.md."})));
 }
 
-function all(){vueSemaine();vueDG();vueTrajets();vueCarte();vueProfil();vueControles();vueReglages();vueReel()}
+function all(){vueSemaine();vueDG();vueCarte();vueProfil();vueControles();vueReglages();vueReel()}
 document.querySelectorAll(".onglets button").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".onglets button").forEach(x=>x.classList.toggle("actif",x===b));document.querySelectorAll(".vue").forEach(v=>v.classList.toggle("actif",v.id==="vue-"+b.dataset.vue));window.scrollTo(0,0)}));
 {const tabs=[...document.querySelectorAll(".onglets button")];
  const maj=()=>tabs.forEach(x=>x.setAttribute("aria-selected",x.classList.contains("actif")?"true":"false"));

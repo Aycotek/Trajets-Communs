@@ -1,3 +1,5 @@
+> Mise à jour du 10 novembre 2026 : l’accueil est maintenant Carte, Quotidien gère un groupe habituel local (binôme ou trinôme), le retrait d’un créneau et une demande de nouveau partenaire. Direction est le dernier onglet. Les préparations sur carte ne remplacent aucun accord et n’entrent pas dans le bilan. Le fond est désormais Plan IGN (data.geopf.fr, Licence Ouverte 2.0), pas le serveur de tuiles OSM. Les tracés routiers restent les précalculs OSRM/OpenStreetMap. Les anciens détails ci-dessous sur le fond OSM et l’ordre des écrans sont historiques. Voir ERGONOMIE.md pour les sources et limites actuelles.
+
 # Trajets Communs (démonstration)
 
 Démonstration de covoiturage domicile-travail pour un site d'entreprise (pilote : Mont-Saint-Aignan, 76). Page statique, sans serveur.
@@ -5,6 +7,7 @@ Démonstration de covoiturage domicile-travail pour un site d'entreprise (pilote
 **Tout est fictif** : 28 profils aux noms d'arbres, domiciles inventés autour de centres de communes, traces de déplacement de test écrites à la main. Seuls le site d'arrivée, les gares et les centres de communes sont réels.
 
 ## Ce que la démonstration fait
+- Page d'accueil = la carte : tous les collaborateurs fictifs visibles, trajets préparés depuis la carte (détail, acceptation, refus) ; la partie direction est en dernier onglet.
 - Appariement "chacun son tour" : plages horaires par jour, congés, détour maximal, temps en plus maximal, prise en charge à domicile ou à la gare, rotation des conducteurs.
 - Bilan à trois niveaux, jamais mélangés : potentiel estimé, trajets déclarés, trajets corroborés.
 - CO₂ en deux méthodes (brute et prudente), euros pour les collaborateurs, coût pour l'entreprise (options A et B).

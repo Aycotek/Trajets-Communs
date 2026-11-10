@@ -134,3 +134,9 @@ p,.doux,.sim,.note-limite,.src,li,summary,.case-sem,.leg,.puce-etat{overflow-wra
  .case-sem,.grille>*,.etage{break-inside:avoid}
  h2,h3{break-after:avoid}
 }
+
+/* Accueil carte : détail du trajet choisi et zone de décision */
+.carte-detail{border-top:1px solid var(--bord);margin-top:10px;padding-top:8px}
+.carte-detail,.actions-carte{min-width:0}
+.actions-carte{margin-top:8px}
+.carte-svg .trace,.carte-svg .domi{cursor:pointer}

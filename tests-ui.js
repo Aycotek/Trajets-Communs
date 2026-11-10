@@ -76,6 +76,30 @@ fr.addEventListener("load",async()=>{await sleep(2500);if(window.__r2)return;win
   const vb0=v().querySelector("svg").getAttribute("viewBox");v().querySelector("#z-plus").click();
   const vb1=v().querySelector("svg").getAttribute("viewBox");U(vb1!==vb0&&parseFloat(vb1.split(" ")[2])===768,"zoom avant change la vue ("+vb1+")");
   v().querySelector("#z-reset").click();U(v().querySelector("svg").getAttribute("viewBox")===vb0,"vue d'ensemble rétablie");
+  const ch=v().querySelector("#carte-choix");
+  U(/ensemble des 28 collaborateurs fictifs est visible/.test(v().textContent),"accueil carte : tous les collaborateurs affichés, dit explicitement");
+  U(/Aucun trajet sélectionné/.test(v().textContent),"sans sélection : consigne affichée");
+  ch.value=ch.options[1].value;ch.dispatchEvent(new Event("change"));
+  U(!!v().querySelector("#detail-trajet .trajet"),"trajet choisi dans la liste : fiche détaillée sous la carte");
+  U(/Décision pour|ne concerne pas|est retiré de ce créneau/.test(v().querySelector(".actions-carte").textContent),"zone de décision du trajet présente pour le profil de démonstration");
+  U(/Règle des captures/.test(v().textContent),"règle des captures rappelée dans le détail");
+  ch.value="";ch.dispatchEvent(new Event("change"));
+  U(!v().querySelector("#detail-trajet"),"retour à tous les trajets : détail fermé");
+  const trace=v().querySelector("svg polyline.trace");
+  U(!!trace,"tracés cliquables présents sur la carte");
+  trace.dispatchEvent(new Event("click"));
+  U(!!v().querySelector("#detail-trajet .trajet"),"clic sur un tracé : trajet sélectionné, fiche affichée");
+  ch.value="";ch.dispatchEvent(new Event("change"));
+  const dm=[...v().querySelectorAll("svg .domi")][0];
+  U(!!dm,"domiciles cliquables présents sur la carte");
+  dm.dispatchEvent(new Event("click"));
+  const pp=v().querySelector("#panneau-pers");
+  U(!!pp,"clic sur un domicile : fiche personne affichée");
+  U(/Trajet proposé|Aucun partenaire compatible|congé ou absent/i.test(pp.textContent),"fiche personne : trajet du jour ou absence honnête de partenaire");
+  const pv=pp.querySelector("#pers-voir");
+  if(pv){pv.click();U(!!v().querySelector("#detail-trajet .trajet"),"depuis la fiche personne : ouverture du détail du trajet")}
+  else{pp.querySelector("#pers-fermer").click()}
+  ch.value="";ch.dispatchEvent(new Event("change"));
   const sel=v().querySelector("#dep-qui");const det=v().querySelector("details:last-of-type");
   sel.value=sel.options[1].value;sel.dispatchEvent(new Event("change"));
   U(/non calculé/.test(v().textContent),"point déplacé : texte « non calculé »");
@@ -158,17 +182,17 @@ fr.addEventListener("load",async()=>{await sleep(7500);if(window.__r5)return;win
 /* Largeur : aucun débordement horizontal à 390 px sur chaque onglet */
 fr.addEventListener("load",async()=>{await sleep(9500);if(window.__r6)return;window.__r6=1;const o=[];let f6=0;const V=(c,m)=>{o.push((c?"OK   ":"ECHEC ")+m);if(!c)f6++};
  try{fr.style.width="390px";fr.style.height="1200px";const d=fr.contentDocument;await sleep(250);
-  for(const vue of ["dg","semaine","trajets","carte","profil","controles","reglages","reel"]){
+  for(const vue of ["carte","semaine","profil","controles","reglages","reel","dg"]){
    d.querySelector('.onglets button[data-vue="'+vue+'"]').click();await sleep(200);
    const sw=d.documentElement.scrollWidth,iw=d.defaultView.innerWidth;
    V(sw<=iw,"onglet "+vue+" : pas de débordement horizontal à 390 px ("+sw+" <= "+iw+")");}
   fr.style.width="320px";await sleep(250);
-  for(const vue of ["dg","semaine","trajets","carte","profil","controles","reglages","reel"]){
+  for(const vue of ["carte","semaine","profil","controles","reglages","reel","dg"]){
    d.querySelector('.onglets button[data-vue="'+vue+'"]').click();await sleep(200);
    const sw=d.documentElement.scrollWidth,iw=d.defaultView.innerWidth;
    V(sw<=iw,"onglet "+vue+" : pas de débordement horizontal à 320 px ("+sw+" <= "+iw+")");}
   fr.style.width="390px";d.body.style.zoom="200%";await sleep(250);
-  for(const vue of ["dg","semaine","trajets","carte","profil","controles","reglages","reel"]){
+  for(const vue of ["carte","semaine","profil","controles","reglages","reel","dg"]){
    d.querySelector('.onglets button[data-vue="'+vue+'"]').click();await sleep(200);
    const sw=d.documentElement.scrollWidth,iw=d.defaultView.innerWidth;
    V(sw<=iw,"onglet "+vue+" : zoom 200 % sans débordement horizontal ("+sw+" <= "+iw+")");}

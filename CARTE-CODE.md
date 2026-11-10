@@ -1,3 +1,5 @@
+> Mise à jour du 10 novembre 2026 : l’accueil est maintenant Carte, Quotidien gère un groupe habituel local (binôme ou trinôme), le retrait d’un créneau et une demande de nouveau partenaire. Direction est le dernier onglet. Les préparations sur carte ne remplacent aucun accord et n’entrent pas dans le bilan. Le fond est désormais Plan IGN (data.geopf.fr, Licence Ouverte 2.0), pas le serveur de tuiles OSM. Les tracés routiers restent les précalculs OSRM/OpenStreetMap. Les anciens détails ci-dessous sur le fond OSM et l’ordre des écrans sont historiques. Voir ERGONOMIE.md pour les sources et limites actuelles.
+
 # Carte du code et des dépendances
 
 Carte écrite à la main à partir de la lecture du source (10 novembre 2026), faute d'outil de cartographie automatique disponible. Elle couvre uniquement le code de cette démonstration. GitHub affiche les schémas Mermaid directement.
@@ -27,7 +29,7 @@ graph LR
 - `route-data.js` : matrice distances/durées précalculées entre les 31 points fictifs (générée par `precalc.js`, non publié).
 - `route-legs.js` : tracés routiers des tronçons de la semaine par défaut (généré par `legs.js`, publié, usage ponctuel documenté dans SOURCES.md).
 - `engine.js` : moteur pur et déterministe. Entrées = profils et paramètres, sorties = trajets et bilans. Aucun DOM, aucun réseau.
-- `app.js` : rendu des onglets et interactions. Tout l'état volatil est dans `sessionStorage` (clés `tc_dec`, `tc_rec`, `tc_out`), rien de durable.
+- `app.js` : rendu des onglets et interactions. La carte est la page d'accueil et porte la préparation des trajets (sélection, détail, décision) ; l'ancien onglet Trajets a été supprimé le 10 nov. 2026 (demande d'Arthur). Tout l'état volatil est dans `sessionStorage` (clés `tc_dec`, `tc_rec`, `tc_out`), rien de durable.
 
 ## Flux de données
 
@@ -57,5 +59,5 @@ flowchart LR
   I6[un détour négatif ne crédite jamais de CO2]
 ```
 
-- Invariants d'interface (tests-ui.html, à chaque push) : parcours complet accepter/refuser/revenir, carte (zoom, liste texte, point déplacé « non calculé »), aléas (retard, absence, ajout tardif), clavier (flèches entre onglets, `aria-selected`).
+- Invariants d'interface (tests-ui.html, à chaque push) : parcours complet accepter/refuser/revenir, carte en page d'accueil (tous les collaborateurs visibles, sélection d'un trajet au clic ou en liste, fiche personne au clic sur un domicile (trajet du jour ou absence honnête de partenaire), fiche détaillée et zone de décision, zoom, liste texte, point déplacé « non calculé »), aléas (retard, absence, ajout tardif), clavier (flèches entre onglets, `aria-selected`), largeurs 390/320 px et zoom 200 % sans débordement sur les 7 onglets (Carte, Quotidien, Profil, Contrôles, Réglages, Réel, Direction).
 - Hors périmètre volontairement : pas de backend, pas de comptes, pas de notifications réelles. Voir BILAN.md pour la frontière démonstration / production.

@@ -1,3 +1,5 @@
+> Mise à jour du 10 novembre 2026 : l’accueil est maintenant Carte, Quotidien gère un groupe habituel local (binôme ou trinôme), le retrait d’un créneau et une demande de nouveau partenaire. Direction est le dernier onglet. Les préparations sur carte ne remplacent aucun accord et n’entrent pas dans le bilan. Le fond est désormais Plan IGN (data.geopf.fr, Licence Ouverte 2.0), pas le serveur de tuiles OSM. Les tracés routiers restent les précalculs OSRM/OpenStreetMap. Les anciens détails ci-dessous sur le fond OSM et l’ordre des écrans sont historiques. Voir ERGONOMIE.md pour les sources et limites actuelles.
+
 # Options de routage et de tuiles — état préparatoire (10 novembre 2026)
 
 Document de préparation pour la décision « moteur de production », réservée à la direction. Tarifs et conditions relevés le 10 novembre 2026 sur les pages officielles citées ; tout est à revérifier au moment de la décision. Aucun compte créé, aucune dépense engagée, aucune intégration réelle. Les scénarios utilisent des volumes fictifs.

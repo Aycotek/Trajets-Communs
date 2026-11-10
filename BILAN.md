@@ -1,3 +1,5 @@
+> Mise à jour du 10 novembre 2026 : l’accueil est maintenant Carte, Quotidien gère un groupe habituel local (binôme ou trinôme), le retrait d’un créneau et une demande de nouveau partenaire. Direction est le dernier onglet. Les préparations sur carte ne remplacent aucun accord et n’entrent pas dans le bilan. Le fond est désormais Plan IGN (data.geopf.fr, Licence Ouverte 2.0), pas le serveur de tuiles OSM. Les tracés routiers restent les précalculs OSRM/OpenStreetMap. Les anciens détails ci-dessous sur le fond OSM et l’ordre des écrans sont historiques. Voir ERGONOMIE.md pour les sources et limites actuelles.
+
 # Bilan borné : démonstration vs production, et décisions restantes
 
 État au 10 novembre 2026. Document de cadrage, sans engagement : aucun backend, aucun contrat, aucune authentification réelle n'a été lancé.
@@ -5,7 +7,7 @@
 ## Ce que la démonstration montre
 - Un calcul d'appariement déterministe et testé (3328 vérifications moteur, tests de parcours navigateur à chaque push via GitHub Actions).
 - Un parcours complet : proposer, accepter, refuser, revenir sur sa décision, retards et retraits simulés, récurrence explicite et non durable, gel des trajets confirmés ailleurs.
-- Une carte lisible au clavier et sans la couleur seule (rond = avec voiture, losange = sans voiture), avec équivalent texte, utilisable à 390 px de large.
+- Une carte en page d'accueil, lisible au clavier et sans la couleur seule (rond = avec voiture, losange = sans voiture), avec équivalent texte, utilisable à 390 px de large ; la préparation des trajets se fait depuis la carte (voir ERGONOMIE.md pour les principes appliqués et leurs sources).
 - Un bilan à trois niveaux jamais mélangés : potentiel estimé, déclaré, corroboré.
 
 ## Ce qu'elle ne prouve pas
