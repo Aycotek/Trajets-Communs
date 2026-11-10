@@ -1,0 +1,17 @@
+/* Essai Leaflet : styles propres à l'essai (aucun style en ligne, CSP) */
+.pc-leaf{height:340px;border-radius:16px;border:1px solid var(--bord);overflow:hidden;background:#efe6d6;position:relative;z-index:0}
+.pc-num-map{display:flex;align-items:center;justify-content:center;border-radius:50%;border:2.5px solid #fff;color:#fff;font:700 13px/1 system-ui,sans-serif;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.pc-num-map.n0{background:#6b1d2c}.pc-num-map.n1{background:#2d5a8a}.pc-num-map.n2{background:#2f6b3f}.pc-num-map.n3{background:#8a2a8a}
+.pc-num-map.faint{font-size:12px;opacity:.92}
+.pc-site-map{color:#3e0f19;font-size:22px;line-height:22px;text-align:center;text-shadow:0 0 3px #fff,0 0 3px #fff}
+.pc-tip{border:2px solid #fff;border-radius:11px;color:#fff;font-weight:700;font-size:13px;padding:2px 8px;box-shadow:none}
+.pc-tip-site{background:#3e0f19}.pc-tip-vous{background:#8f5f16}
+.pc-tip.leaflet-tooltip-top:before,.pc-tip.leaflet-tooltip-bottom:before{display:none}
+.pc-deplace{margin-top:6px;min-height:44px;border-radius:999px;border:1px solid var(--bord);background:rgba(255,255,255,.8);color:var(--bordeaux);font-weight:600;padding:0 14px;cursor:pointer}
+.pc-deplace[aria-pressed="true"]{background:var(--bordeaux);color:#fff}
+.bandeau-essai{background:#fff3cd;border:1px solid #c9a227;color:#4a3a00;padding:8px 12px;border-radius:12px;margin:8px;font-size:.9rem}
+.pc-adr input{width:100%;box-sizing:border-box;min-height:52px;border-radius:14px;border:1px solid var(--bord);padding:0 14px;font:inherit;font-size:1rem;background:#fff;color:var(--bordeaux-nuit)}
+.pc-sugg{display:grid;gap:8px;margin:8px 0}
+.pc-sug{text-align:left;padding:10px 12px;height:auto;min-height:48px}
+.pc-secours{margin-top:10px}
+.pc-secours summary{cursor:pointer;font-weight:600;color:var(--bordeaux);min-height:44px;display:flex;align-items:center}
