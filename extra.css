@@ -71,3 +71,11 @@ svg.carte-svg{width:100%;height:auto;background:rgba(255,250,243,.7);border:1px 
 
 .case-sem details,.sim details{margin-top:4px}.case-sem details p,.sim details p{margin:4px 0}
 .puce-etat{font-size:.8rem}.doux{font-size:.88rem}.sim{font-size:.86rem}
+
+.h24-wrap{display:inline-flex;flex-direction:column;align-items:flex-start;gap:0}
+.h24{font-size:.72rem;color:var(--doux);min-width:32px}
+.ligne-cx{display:flex;gap:8px;align-items:center;margin:10px 0;font-weight:600}
+.ligne-cx input{width:20px;height:20px;accent-color:#6b1d2c}
+html.cx{--doux:#463234;--bord:rgba(62,15,25,.55);--verre:#fffaf2;--verre-fort:#fff}
+html.cx .fond-deco{display:none}
+html.cx .carte,html.cx .kpi,html.cx .bandeau-budget,html.cx .hero{background:#fffaf2}

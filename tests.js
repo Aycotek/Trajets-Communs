@@ -140,4 +140,14 @@ for(const seed of [2026,1,2,3,4,5]){
 {for(const seed of [2026,1,2,3,4,5,6,7,8,9]){const po=E.population(28,seed),rr=E.match(po,E.defaults());
  const seen=new Set();
  for(const tr of rr.trips)for(const x of [tr.drv,...tr.pax]){const k=tr.day+tr.dir+"|"+x.id;ok(!seen.has(k),"aucun doublon "+k);seen.add(k)}}}
+/* Profils extrêmes */
+{const p9=E.defaults();
+ const noCar=E.population(28,7).map(x=>Object.assign({},x,{aVoiture:false}));
+ ok(E.match(noCar,p9).trips.length===0,"aucune voiture : aucun trajet, pas de plantage");
+ const absLun=E.population(28,7).map(x=>Object.assign({},x,{jours:x.jours.map((j,i)=>i===0?Object.assign({},j,{present:false}):j)}));
+ ok(E.match(absLun,p9).trips.every(tr=>tr.day!==0),"tous absents lundi : aucun trajet lundi");
+ const meme=E.population(28,7).map(x=>Object.assign({},x,{home:{lat:49.44,lng:1.09},mode:"domicile",gare:null}));
+ const rm=E.match(meme,p9);
+ ok(rm.trips.length>0,"tous au même endroit : des trajets se forment");
+ ok(rm.trips.every(tr=>tr.ev.detour<=0.2),"tous au même endroit : détour quasi nul");}
 console.log(n+" vérifications au total");

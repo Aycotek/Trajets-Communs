@@ -16,6 +16,7 @@ const byId=id=>S.pop.find(x=>x.id===id);
 
 try{S.dec=JSON.parse(sessionStorage.getItem("tc_dec")||"{}");S.recur=JSON.parse(sessionStorage.getItem("tc_rec")||"{}");S.out=JSON.parse(sessionStorage.getItem("tc_out")||"{}")}catch(_){S.dec={};S.recur={};S.out={}}
 S.dec=S.dec||{};S.recur=S.recur||{};S.out=S.out||{};
+try{if(sessionStorage.getItem("tc_cx")){S.cx=true;document.documentElement.classList.add("cx")}}catch(_){ }
 function refreshAll(){recompute();vueDG();vueTrajets();vueCarte();vueControles();vueProfil();vueSemaine()}
 function saveSim(){try{sessionStorage.setItem("tc_dec",JSON.stringify(S.dec));sessionStorage.setItem("tc_rec",JSON.stringify(S.recur));sessionStorage.setItem("tc_out",JSON.stringify(S.out))}catch(_){}}
 function recompute(){S.res=E.match(S.pop,S.p,undefined,S.out);S.bil=E.bilan(S.res.trips,S.p,undefined,S.dec)}
@@ -216,7 +217,9 @@ function vueProfil(){
  const toT=m=>E.hm(m),fromT=v=>{const a=v.split(":");return (+a[0])*60+(+a[1])};
  x.jours.forEach((j,i)=>{
   const cb=h("input",{type:"checkbox","aria-label":"Présent "+E.JOURS[i],onchange:e=>{j.present=e.target.checked;refresh()}});cb.checked=j.present;
-  const tin=(key)=>{const t=h("input",{type:"time",value:toT(j[key]),"aria-label":key+" "+E.JOURS[i],onchange:e=>{if(e.target.value){j[key]=fromT(e.target.value);refresh()}}});return t};
+  const tin=(key)=>{const out=h("output",{class:"h24",title:"format 24 heures",text:toT(j[key])});
+   const t=h("input",{type:"time",value:toT(j[key]),"aria-label":key+" "+E.JOURS[i]+" (format 24 heures)",onchange:e=>{if(e.target.value){j[key]=fromT(e.target.value);out.textContent=e.target.value;refresh()}}});
+   return h("span",{class:"h24-wrap"},t,out)};
   tb.append(h("tr",null,h("td",{text:E.JOURS[i]}),h("td",null,cb,j.present?"":" congé"),h("td",null,h("div",{class:"plage"},tin("a0"),tin("a1"))),h("td",null,h("div",{class:"plage"},tin("d0"),tin("d1")))));
  });
  tbl.append(tb);
@@ -357,6 +360,9 @@ function champ(label,val,step,min,max,onch,src){
 function vueReglages(){
  const el=$("#vue-reglages");el.replaceChildren();
  const c=h("div",{class:"carte"},h("h2",{text:"Hypothèses et paramètres"}),h("p",{class:"doux",text:"Chaque valeur dit d'où elle vient. Une hypothèse de démonstration doit être remplacée par une mesure ou une source avant toute décision."}));
+ const cx=h("input",{type:"checkbox",id:"cx-case"});cx.checked=!!S.cx;
+ cx.addEventListener("change",()=>{S.cx=cx.checked;document.documentElement.classList.toggle("cx",S.cx);try{sessionStorage.setItem("tc_cx",S.cx?"1":"")}catch(_){};});
+ c.append(h("label",{class:"ligne-cx"},cx,"Contraste renforcé : textes et bordures plus marqués, décor retiré (mémorisé le temps de la session)"));
  D.PARAMS.forEach(x=>c.append(champ(x.l,S.p[x.k],x.step,x.min,x.max,v=>{S.p[x.k]=v;recompute();vueDG();vueTrajets();vueCarte();vueControles();vueProfil();vueSemaine()},x.src)));
  c.append(h("div",{class:"barre-outils"},h("button",{onclick:()=>{S.p=E.defaults();recompute();all()},text:"Revenir aux valeurs initiales"})));
  el.append(c);
