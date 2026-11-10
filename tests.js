@@ -150,4 +150,9 @@ for(const seed of [2026,1,2,3,4,5]){
  const rm=E.match(meme,p9);
  ok(rm.trips.length>0,"tous au même endroit : des trajets se forment");
  ok(rm.trips.every(tr=>tr.ev.detour<=0.2),"tous au même endroit : détour quasi nul");}
+
+/* Injection : aucune écriture HTML brute dans le code applicatif */
+{const fs=require("fs");const src=[""+fs.readFileSync("app.js"),""+fs.readFileSync("engine.js"),""+fs.readFileSync("data.js")].join("\n");
+ ok(!/innerHTML|outerHTML|insertAdjacentHTML|document\.write/.test(src),"aucune écriture HTML brute (innerHTML et équivalents absents)");
+ ok(/e\.textContent=attrs\[k\]/.test(src),"le constructeur h() écrit le texte via textContent");}
 console.log(n+" vérifications au total");

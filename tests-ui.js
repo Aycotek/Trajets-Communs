@@ -45,6 +45,15 @@ fr.addEventListener("load",async()=>{
    btn(by(nb),"Refuser").click();
    T(st(by(na))===sa,"se retirer du créneau B ne modifie pas le créneau A confirmé ("+st(by(na))+")");}
   T(/Comprendre la démonstration en une minute/.test(d.querySelector("#vue-dg").innerText),"aide rapide présente sur l'onglet Décision");
+  const outils=()=>[...d.querySelectorAll("#vue-semaine .barre-outils button")];
+  const trouve=t=>outils().find(b=>b.textContent.startsWith(t));
+  T(!!trouve("Effacer mes choix simulés"),"bouton d'effacement présent");
+  const avantEff=decl();trouve("Effacer mes choix simulés").click();
+  T(!!trouve("Confirmer l'effacement"),"1er clic : confirmation demandée, rien d'effacé");
+  T(!!trouve("Annuler"),"annulation proposée");trouve("Annuler").click();
+  T(decl()===avantEff,"annulation : choix inchangés ("+decl()+")");
+  trouve("Effacer mes choix simulés").click();trouve("Confirmer l'effacement").click();
+  T(decl()===d0,"confirmation : choix simulés effacés, retour au scénario de base ("+decl()+" = "+d0+")");
   T(true,"fin du parcours");
  }catch(e){T(false,"exception "+e.message)}
  out.push(fails?fails+" ECHEC(S)":"PARCOURS OK");
@@ -68,8 +77,16 @@ fr.addEventListener("load",async()=>{await sleep(2500);if(window.__r2)return;win
   U(/précalculé le \d{4}-\d{2}-\d{2}/.test(v().textContent),"date du précalcul affichée");
   v().querySelector("svg image").dispatchEvent(new d.defaultView.Event("error"));
   U(v().querySelector("#tuiles-ko")&&!v().querySelector("#tuiles-ko").hidden,"tuile en échec : note visible, liste texte rappelée");
+  const W2=d.defaultView,date0=W2.TCROUTE.date;
+  const rerend=()=>{const sel=d.querySelector("#dep-qui");sel.dispatchEvent(new W2.Event("change"))};
+  W2.TCROUTE.date="2020-01-01";rerend();
+  U(/plus de 6 mois/.test(v().textContent),"tracés anciens : alerte d'expiration affichée (seuil convention de démonstration, pas une garantie)");
+  W2.TCROUTE.date=date0;rerend();
+  U(!/plus de 6 mois/.test(v().textContent),"tracés à jour : pas d'alerte d'expiration");
+  const libres=[...d.querySelectorAll("input")].filter(i=>(i.type==="text"||i.type==="search")&&!i.classList.contains("hm"));
+  U(libres.length===0,"aucun champ texte libre : surface d'injection réduite, données internes rendues via textContent");
   v().querySelector("#pt-deplace").dispatchEvent(new KeyboardEvent("keydown",{key:"ArrowLeft",bubbles:true}));U(true,"déplacement clavier sans erreur");
- }catch(e){U(false,"exception carte "+e.message)}
+ }catch(e){U(false,"exception carte "+e.message+" @ "+(e.stack||"").split("\n")[1])}
  document.getElementById("res").textContent+="\n--- carte ---\n"+out2.join("\n")+"\n"+(f2?f2+" ECHEC(S) carte":"CARTE OK");
 });
 /* Aléas : départ ajouté tard, passager absent, retour non assuré */
@@ -136,6 +153,7 @@ fr.addEventListener("load",async()=>{await sleep(9500);if(window.__r6)return;win
    d.querySelector('.onglets button[data-vue="'+vue+'"]').click();await sleep(200);
    const sw=d.documentElement.scrollWidth,iw=d.defaultView.innerWidth;
    V(sw<=iw,"onglet "+vue+" : pas de débordement horizontal à 320 px ("+sw+" <= "+iw+")");}
+  fr.style.width="390px";
  }catch(e){V(false,"exception largeur "+e.message)}
  document.getElementById("res").textContent+="\n--- largeur 390px ---\n"+o.join("\n")+"\n"+(f6?f6+" ECHEC(S) largeur":"LARGEUR OK");
 });

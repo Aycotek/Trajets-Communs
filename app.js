@@ -340,7 +340,15 @@ function vueSemaine(){
   grille.append(ligne)}));
  el.append(h("div",{class:"carte"},h("h2",{text:"Ma semaine"}),
   h("div",{class:"sim",role:"note"},"Démonstration : rien n'est accepté, réservé ni payé à votre place. Les autres participants sont fictifs et simulés, aucun message réel n'est envoyé.",h("details",null,h("summary",{text:"Détails"}),h("p",{text:"La semaine est proposée à l'avance à partir du profil ; vous acceptez ou refusez chaque trajet. Vos choix ne sont gardés que dans cet onglet (sessionStorage), rien n'est durable."}))),
-  h("div",{class:"barre-outils"},sel,h("button",{type:"button",onclick:()=>{S.dec={};S.recur={};S.out={};saveSim();S.alea=null;refreshAll()},text:"Effacer mes choix simulés"})),grille));
+  h("div",{class:"barre-outils"},sel,(()=>{const b=h("button",{type:"button",text:"Effacer mes choix simulés"});
+   b.addEventListener("click",()=>{
+    if(b.dataset.arm){S.dec={};S.recur={};S.out={};saveSim();S.alea=null;refreshAll();return}
+    b.dataset.arm="1";b.textContent="Confirmer l'effacement de tous les choix simulés ?";
+    const ann=h("button",{type:"button",text:"Annuler"});
+    const fin=()=>{delete b.dataset.arm;b.textContent="Effacer mes choix simulés";ann.remove()};
+    ann.addEventListener("click",()=>{fin();b.focus()});
+    b.after(ann);setTimeout(()=>{if(b.dataset.arm)fin()},10000)});
+   return b})()),grille));
 }
 
 /* ---------- Contrôles anti-abus ---------- */
