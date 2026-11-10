@@ -72,24 +72,28 @@ fr.addEventListener("load",async()=>{
 fr.addEventListener("load",async()=>{await sleep(2500);if(window.__r2)return;window.__r2=1;const out2=[];let f2=0;const U=(c,m)=>{out2.push((c?"OK   ":"ECHEC ")+m);if(!c)f2++};
  try{const d=fr.contentDocument;d.querySelector('.onglets button[data-vue="carte"]').click();const v=()=>d.querySelector("#vue-carte");
   U(!!v().querySelector("details ol.liste-carte"),"liste texte équivalente présente");
-  U(v().querySelector("#z-plus")&&v().querySelector("#z-moins")&&v().querySelector("#z-reset"),"boutons Zoom +, Zoom −, Vue d'ensemble");
+  U(v().querySelector("#z-plus")&&v().querySelector("#z-moins")&&v().querySelector("#z-reset"),"boutons Zoom +, Zoom −, Vue d'ensemble (flottants sur la carte)");
   const vb0=v().querySelector("svg").getAttribute("viewBox");v().querySelector("#z-plus").click();
   const vb1=v().querySelector("svg").getAttribute("viewBox");U(vb1!==vb0&&parseFloat(vb1.split(" ")[2])===768,"zoom avant change la vue ("+vb1+")");
   v().querySelector("#z-reset").click();U(v().querySelector("svg").getAttribute("viewBox")===vb0,"vue d'ensemble rétablie");
-  const ch=v().querySelector("#carte-choix");
   U(/ensemble des 28 collaborateurs fictifs est visible/.test(v().textContent),"accueil carte : tous les collaborateurs affichés, dit explicitement");
   U(/Aucun trajet sélectionné/.test(v().textContent),"sans sélection : consigne affichée");
-  ch.value=ch.options[1].value;ch.dispatchEvent(new Event("change"));
+  const rail=()=>[...v().querySelectorAll(".rail-trajets button.horaire")];const tous=()=>rail()[0];
+  U(rail().length>=2&&/^Tous/.test(tous().textContent),"cartes horaires : « Tous » puis un trajet par horaire");
+  const hh=rail().slice(1).map(b=>b.textContent.slice(0,5));U(hh.every((x,i)=>i===0||x>=hh[i-1]),"cartes horaires triées par heure de départ ("+hh.join(", ")+")");
+  U(v().querySelectorAll("svg .badge-heure").length===rail().length-1,"une pastille d'heure sur la carte par trajet proposé");
+  rail()[1].click();
   U(!!v().querySelector("#detail-trajet .trajet"),"trajet choisi dans la liste : fiche détaillée sous la carte");
   U(/Décision pour|ne concerne pas|est retiré de ce créneau/.test(v().querySelector(".actions-carte").textContent),"zone de décision du trajet présente pour le profil de démonstration");
   U(/Règle des captures/.test(v().textContent),"règle des captures rappelée dans le détail");
-  ch.value="";ch.dispatchEvent(new Event("change"));
+  U(rail().filter(b=>b.getAttribute("aria-pressed")==="true").length===1&&v().querySelectorAll("svg .badge-heure").length===rail().length-1,"trajet choisi : une seule carte horaire active, tous les horaires restent visibles sur la carte");
+  tous().click();
   U(!v().querySelector("#detail-trajet"),"retour à tous les trajets : détail fermé");
   const trace=v().querySelector("svg polyline.trace");
   U(!!trace,"tracés cliquables présents sur la carte");
   trace.dispatchEvent(new Event("click"));
   U(!!v().querySelector("#detail-trajet .trajet"),"clic sur un tracé : trajet sélectionné, fiche affichée");
-  ch.value="";ch.dispatchEvent(new Event("change"));
+  tous().click();
   const dm=[...v().querySelectorAll("svg .domi")][0];
   U(!!dm,"domiciles cliquables présents sur la carte");
   dm.dispatchEvent(new Event("click"));
@@ -99,7 +103,7 @@ fr.addEventListener("load",async()=>{await sleep(2500);if(window.__r2)return;win
   const pv=pp.querySelector("#pers-voir");
   if(pv){pv.click();U(!!v().querySelector("#detail-trajet .trajet"),"depuis la fiche personne : ouverture du détail du trajet")}
   else{pp.querySelector("#pers-fermer").click()}
-  ch.value="";ch.dispatchEvent(new Event("change"));
+  tous().click();
   const sel=v().querySelector("#dep-qui");const det=v().querySelector("details:last-of-type");
   sel.value=sel.options[1].value;sel.dispatchEvent(new Event("change"));
   U(/non calculé/.test(v().textContent),"point déplacé : texte « non calculé »");

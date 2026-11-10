@@ -178,18 +178,27 @@ function panneauDeplace(){
 }
 function vueCarte(){
  const el=$("#vue-carte");el.replaceChildren();
- const bar=h("div",{class:"barre-outils"});
- E.JOURS.forEach((j,i)=>bar.append(h("button",{class:i===S.carteJour?"actif":"",onclick:()=>{S.preview=null;S.carteJour=i;S.carteSel=null;S.cartePers=null;S.carteDz=0;vueCarte()},text:j})));
- ["matin","soir"].forEach(d=>bar.append(h("button",{class:d===S.carteDir?"actif":"",onclick:()=>{S.preview=null;S.carteDir=d;S.carteSel=null;S.cartePers=null;S.carteDz=0;vueCarte()},text:d==="matin"?"Matin":"Soir"})));
+ const bar=h("div",{class:"seg-jours",role:"group","aria-label":"Jour"});
+ E.JOURS.forEach((j,i)=>bar.append(h("button",{type:"button",class:i===S.carteJour?"actif":"","aria-pressed":String(i===S.carteJour),onclick:()=>{S.preview=null;S.carteJour=i;S.carteSel=null;S.cartePers=null;S.carteDz=0;vueCarte()},text:j})));
+ const bar2=h("div",{class:"seg-sens",role:"group","aria-label":"Sens du trajet"});
+ ["matin","soir"].forEach(d=>bar2.append(h("button",{type:"button",class:d===S.carteDir?"actif":"","aria-pressed":String(d===S.carteDir),onclick:()=>{S.preview=null;S.carteDir=d;S.carteSel=null;S.cartePers=null;S.carteDz=0;vueCarte()},text:d==="matin"?"Matin : vers le site":"Soir : retour"})));
  const tsAll=S.res.trips.filter(t=>t.day===S.carteJour&&t.dir===S.carteDir);
  const sel=S.preview||(S.carteSel!=null&&tsAll[S.carteSel]?tsAll[S.carteSel]:null);
- const choix=h("select",{id:"carte-choix","aria-label":"Choisir un trajet à détailler",onchange:e=>{S.preview=null;S.carteSel=e.target.value===""?null:+e.target.value;S.carteDz=0;vueCarte()}},h("option",{value:"",text:"Tous les trajets"}),...tsAll.map((t,i)=>h("option",{value:String(i),text:"Zoom : "+t.drv.nom.replace("Profil ","")+" + "+t.pax.length+" passager(s), "+E.hm(t.ev.depart)+"-"+E.hm(t.ev.arrive)})));
- choix.value=sel?String(S.carteSel):"";bar.append(choix);
- const person=h("select",{"aria-label":"Choisir un collaborateur",onchange:e=>{S.cartePers=e.target.value||null;if(S.cartePers)S.profil=S.cartePers;S.trio=false;S.search=true;S.preview=null;vueCarte()}},h("option",{value:"",text:"Trouver des partenaires pour…"}),...S.pop.map(q=>h("option",{value:q.id,text:q.nom+" · "+q.commune})));person.value=S.cartePers||"";bar.append(person);
- const zb=h("div",{class:"barre-outils",role:"group","aria-label":"Zoom de la carte"},
-  h("button",{type:"button",id:"z-plus",...((S.carteDz||0)>=3?{disabled:true}:{}),"aria-label":"Zoom avant",onclick:()=>{S.carteDz=(S.carteDz||0)+1;vueCarte();document.getElementById("z-plus").focus()},text:"Zoom +"}),
-  h("button",{type:"button",id:"z-moins",...((S.carteDz||0)<=-1?{disabled:true}:{}),"aria-label":"Zoom arrière",onclick:()=>{S.carteDz=(S.carteDz||0)-1;vueCarte();document.getElementById("z-moins").focus()},text:"Zoom −"}),
-  h("button",{type:"button",id:"z-reset","aria-label":"Vue d'ensemble",onclick:()=>{S.carteDz=0;vueCarte();document.getElementById("z-reset").focus()},text:"Vue d'ensemble"}));
+ const col=["#6b1d2c","#8f5f16","#2f6b3f","#2d5a8a","#8a2a8a","#7a5a2a"];
+ const colDe=t=>col[Math.max(0,tsAll.indexOf(t))%col.length];
+ const rail=h("div",{class:"rail-trajets",role:"group","aria-label":"Trajets proposés, du plus tôt au plus tard"});
+ rail.append(h("button",{type:"button",class:"horaire"+(sel?"":" actif"),"aria-pressed":String(!sel),...(sel?{}:{id:"carte-choix"}),onclick:()=>{S.preview=null;S.carteSel=null;S.carteDz=0;vueCarte()}},h("b",{text:"Tous"}),h("span",{text:tsAll.length+" trajet"+(tsAll.length>1?"s":"")})));
+ if(S.preview&&!tsAll.includes(S.preview))rail.append(h("button",{type:"button",class:"horaire actif apercu","aria-pressed":"true",id:"carte-choix"},h("b",{text:E.hm(S.preview.ev.depart)+" → "+E.hm(S.preview.ev.arrive)}),h("span",{text:"Aperçu, non réservé"})));
+ tsAll.map((t,i)=>i).sort((x,y)=>tsAll[x].ev.depart-tsAll[y].ev.depart).forEach(i=>{const t=tsAll[i],on=sel===t,moi=t.drv.id===S.profil||t.pax.some(q=>q.id===S.profil);
+  const bt=h("button",{type:"button",class:"horaire"+(on?" actif":""),"aria-pressed":String(on),...(on?{id:"carte-choix"}:{}),onclick:()=>{S.preview=null;S.carteSel=i;S.carteDz=0;S.moved=null;vueCarte()}},
+   h("b",{text:E.hm(t.ev.depart)+" → "+E.hm(t.ev.arrive)}),h("span",{text:t.drv.nom.replace("Profil ","")+" · "+(t.pax.length+1)+" pers."+(moi?" · vous":"")}));
+  bt.style.setProperty("--c",colDe(t));rail.append(bt)});
+ const person=h("select",{"aria-label":"Chercher des partenaires pour une personne",onchange:e=>{S.cartePers=e.target.value||null;if(S.cartePers)S.profil=S.cartePers;S.trio=false;S.search=true;S.preview=null;vueCarte()}},h("option",{value:"",text:"Chercher des partenaires pour…"}),...S.pop.map(q=>h("option",{value:q.id,text:q.nom+" · "+q.commune})));person.value=S.cartePers||"";
+ const bar3=h("div",{class:"barre-outils"},person);
+ const zb=h("div",{class:"zoom-flot",role:"group","aria-label":"Zoom de la carte"},
+  h("button",{type:"button",id:"z-plus",...((S.carteDz||0)>=3?{disabled:true}:{}),"aria-label":"Zoom avant",onclick:()=>{S.carteDz=(S.carteDz||0)+1;vueCarte();document.getElementById("z-plus").focus()},text:"+"}),
+  h("button",{type:"button",id:"z-moins",...((S.carteDz||0)<=-1?{disabled:true}:{}),"aria-label":"Zoom arrière",onclick:()=>{S.carteDz=(S.carteDz||0)-1;vueCarte();document.getElementById("z-moins").focus()},text:"\u2212"}),
+  h("button",{type:"button",id:"z-reset","aria-label":"Vue d'ensemble",title:"Vue d'ensemble",onclick:()=>{S.carteDz=0;vueCarte();document.getElementById("z-reset").focus()},text:"\u2922"}));
  const all=sel?[...sel.ev.pts]:[D.SITE,...S.pop.map(x=>x.home)];
  if(S.moved)all.push(S.moved,byId(S.moved.id).home);
  const la=all.map(q=>q.lat),lo=all.map(q=>q.lng);
@@ -211,20 +220,21 @@ function vueCarte(){
  const R=window.TCROUTE,idx={};if(R)R.pts.forEach((q,i)=>{idx[q[0].toFixed(5)+","+q[1].toFixed(5)]=i});
  const kk=q=>q.lat.toFixed(5)+","+q.lng.toFixed(5);
  const ts=sel?[sel]:tsAll;
- const col=["#6b1d2c","#b9802f","#2f6b3f","#2d5a8a","#8a2a8a","#7a5a2a"];
+ const dessin=sel?[...tsAll.filter(q=>q!==sel),sel]:tsAll,badges=[];
  let tracesReelles=0;
- ts.forEach((t,i)=>{const c=col[i%col.length];const g=R&&R.routes[idx[kk(t.drv.home)]];
+dessin.forEach((t,i)=>{const c=colDe(t),faint=!!sel&&t!==sel;const g=R&&R.routes[idx[kk(t.drv.home)]];
   const L=window.TCLEGS||{};const seq=t.ev.pts.map(q=>idx[kk(q)]);const legs=[];for(let q=0;q<seq.length-1;q++)legs.push(L[seq[q]+">"+seq[q+1]]);
   const complet=legs.length>0&&legs.every(Boolean);
   const geo=complet?[].concat(...legs):g;
-  const sel=()=>{S.carteSel=tsAll.indexOf(t);S.carteDz=0;S.moved=null;vueCarte();const n=document.getElementById("carte-choix");if(n)n.focus()};
-  if(geo){if(complet)tracesReelles++;const path=geo.map(q=>{const a=P({lat:q[1],lng:q[0]});return a.x.toFixed(1)+","+a.y.toFixed(1)}).join(" ");
-   svg.append(sv("polyline",{points:path,fill:"none",stroke:"#fff","stroke-width":6*f*.5,"stroke-linejoin":"round","stroke-opacity":".9"}));
-   const tr=sv("polyline",{points:path,fill:"none",stroke:c,"stroke-width":3.4*f*.5,"stroke-linejoin":"round","stroke-dasharray":complet?"":"8 5",class:"trace",tabindex:"-1"});
-   tr.addEventListener("click",sel);tr.append(sv("title",null,"Trajet de "+t.drv.nom+" : cliquer pour le détail"));svg.append(tr)}
-  else{const path=t.ev.pts.map(q=>{const a=P(q);return a.x.toFixed(1)+","+a.y.toFixed(1)}).join(" ");const tr=sv("polyline",{points:path,fill:"none",stroke:c,"stroke-width":3*f*.5,"stroke-dasharray":"6 4",class:"trace"});
-   tr.addEventListener("click",sel);tr.append(sv("title",null,"Trajet de "+t.drv.nom+" : cliquer pour le détail"));svg.append(tr)}
-  t.pax.forEach(x=>{const a=P(x.mode==="gare"&&x.gare?x.gare:x.home);const cc=sv("circle",{cx:a.x,cy:a.y,r:7*f*.85,fill:"#fff",stroke:c,"stroke-width":3*f*.85,class:"trace"});cc.addEventListener("click",sel);svg.append(cc)})});
+  const choisi=()=>{S.preview=null;S.carteSel=tsAll.indexOf(t);S.carteDz=0;S.moved=null;vueCarte();const n=document.getElementById("carte-choix");if(n)n.focus()};
+  if(geo){if(complet&&!faint)tracesReelles++;const path=geo.map(q=>{const a=P({lat:q[1],lng:q[0]});return a.x.toFixed(1)+","+a.y.toFixed(1)}).join(" ");
+   svg.append(sv("polyline",{points:path,fill:"none",stroke:"#fff","stroke-width":6*f*.5,"stroke-linejoin":"round","stroke-opacity":faint?".35":".9"}));
+   const tr=sv("polyline",{points:path,fill:"none",stroke:c,"stroke-width":3.4*f*.5,"stroke-linejoin":"round","stroke-dasharray":complet?"":"8 5","stroke-opacity":faint?".4":"1",class:"trace",tabindex:"-1"});
+   tr.addEventListener("click",choisi);tr.append(sv("title",null,"Trajet de "+t.drv.nom+" : cliquer pour le détail"));svg.append(tr)}
+  else{const path=t.ev.pts.map(q=>{const a=P(q);return a.x.toFixed(1)+","+a.y.toFixed(1)}).join(" ");const tr=sv("polyline",{points:path,fill:"none",stroke:c,"stroke-width":3*f*.5,"stroke-dasharray":"6 4","stroke-opacity":faint?".4":"1",class:"trace"});
+   tr.addEventListener("click",choisi);tr.append(sv("title",null,"Trajet de "+t.drv.nom+" : cliquer pour le détail"));svg.append(tr)}
+  badges.push([t,c,faint]);
+  if(!faint)t.pax.forEach(x=>{const a=P(x.mode==="gare"&&x.gare?x.gare:x.home);const cc=sv("circle",{cx:a.x,cy:a.y,r:7*f*.85,fill:"#fff",stroke:c,"stroke-width":3*f*.85,class:"trace"});cc.addEventListener("click",choisi);svg.append(cc)})});
  const inTrip=new Set();ts.forEach(t=>{inTrip.add(t.drv.id);t.pax.forEach(x=>inTrip.add(x.id))});
  S.pop.forEach(x=>{const a=P(x.home);const present=x.jours[S.carteJour].present;
   const r=(inTrip.has(x.id)?6:4.5)*f*.85,fill=!present?"#fff":x.aVoiture?"#6b1d2c":"#b9802f";
@@ -238,6 +248,10 @@ function vueCarte(){
  const s0=P(D.SITE),r0=9*f*.85;
  svg.append(sv("polygon",{points:[[s0.x,s0.y-r0*1.6],[s0.x+r0*1.4,s0.y+r0],[s0.x-r0*1.4,s0.y+r0]].map(q=>q.join(",")).join(" "),fill:"#3e0f19",stroke:"#fff","stroke-width":f*.4}));
  svg.append(sv("text",{x:s0.x+r0*1.8,y:s0.y-r0*.5,"font-size":13*f*.85,"font-weight":"700",fill:"#3e0f19",stroke:"#fff","stroke-width":f,"paint-order":"stroke"},"Site d'arrivée"));
+ const posees=[];badges.forEach(([t,c,faint])=>{const a=P(t.drv.home),txt=E.hm(t.ev.depart),fs=12.5*f*.85,w=fs*3.1,hh=fs*1.8;let y0=a.y-6*f*.85-hh-fs*.25;for(let k=0;k<8&&posees.some(p=>Math.abs(p[0]-a.x)<w&&Math.abs(p[1]-y0)<hh*.95);k++)y0-=hh*1.05;posees.push([a.x,y0]);
+  const g=sv("g",{class:"trace badge-heure",opacity:faint?".72":"1"});
+  g.append(sv("rect",{x:a.x-w/2,y:y0,width:w,height:hh,rx:hh/2,fill:c,stroke:"#fff","stroke-width":f*.6}),sv("text",{x:a.x,y:y0+hh*.7,"text-anchor":"middle","font-size":fs,"font-weight":"700",fill:"#fff"},txt),sv("title",null,"Trajet de "+t.drv.nom+" : départ "+txt+". Cliquer pour le détail"));
+  g.addEventListener("click",()=>{S.preview=null;S.carteSel=tsAll.indexOf(t);S.carteDz=0;S.moved=null;vueCarte();const n=document.getElementById("carte-choix");if(n)n.focus()});svg.append(g)});
  if(S.moved){const mo=byId(S.moved.id),a0=P(mo.home),a1=P(S.moved);
   svg.append(sv("line",{x1:a0.x,y1:a0.y,x2:a1.x,y2:a1.y,stroke:"#3e0f19","stroke-width":f*.5,"stroke-dasharray":"3 3"}));
   const mk=sv("circle",{cx:a1.x,cy:a1.y,r:9*f*.85,fill:"#fff","fill-opacity":".6",stroke:"#3e0f19","stroke-width":f*.7,"stroke-dasharray":"4 3",id:"pt-deplace",style:"touch-action:none;cursor:grab",tabindex:"0",role:"button","aria-label":"Point déplacé, flèches du clavier pour le bouger de 200 mètres"});
@@ -249,9 +263,9 @@ function vueCarte(){
  svg.append(sv("text",{x:W-4,y:H-5,"font-size":8*f*.85,"text-anchor":"end",fill:"#333",stroke:"#fff","stroke-width":f*.5,"paint-order":"stroke"},"© IGN · Plan IGN · Licence Ouverte"));
  const ageJ=R&&R.date?Math.floor((Date.now()-new Date(R.date+"T00:00:00Z").getTime())/864e5):0;
  el.append(h("div",{class:"carte"},h("h2",{text:"Carte des trajets"}),
-  h("p",{class:"doux",text:"Page d'accueil : l'ensemble des "+S.pop.length+" collaborateurs fictifs est visible (ronds : avec voiture, losanges : sans voiture, pointillés : absents ce jour). Choisissez un trajet (tracé coloré) ou une personne (rond, losange) sur la carte, ou dans la liste, pour voir le détail et décider."}),bar,zb,svg,
+  h("p",{class:"doux",text:"L'ensemble des "+S.pop.length+" collaborateurs fictifs est visible. Touchez une heure, une pastille ou un tracé pour voir le trajet et décider."}),bar,bar2,rail,h("div",{class:"carte-zone"},svg,zb),bar3,
   h("p",{id:"tuiles-ko",class:"note-limite",hidden:"",text:"Le fond de carte Plan IGN n'a pas pu être chargé. Les tracés et la liste texte ci-dessous restent utilisables. En production, ce point est couvert par un fournisseur de tuiles sous contrat ou un hébergement propre."}),
-  h("div",{class:"leg"},h("span",null,h("i",{class:"d1"}),"rond : avec voiture"),h("span",null,h("i",{class:"d2 los"}),"losange : sans voiture"),h("span",{text:"carré bleu : gare · cercle blanc cerclé : prise en charge · pointillé : absent ce jour"})),
+  h("div",{class:"leg"},h("span",null,h("i",{class:"d1"}),"rond : avec voiture"),h("span",null,h("i",{class:"d2 los"}),"losange : sans voiture"),h("span",{text:"pastille : heure de départ du conducteur · carré bleu : gare · cercle blanc cerclé : prise en charge · pointillé : absent ce jour"})),
   h("p",{class:"doux",text:"Fond : © IGN, Plan IGN en flux (mise à jour continue), Licence Ouverte 2.0, chargé depuis data.geopf.fr. Tracés : itinéraire routier du conducteur vers le site, précalculé le "+(R?R.date:"?")+" (OSRM, sans trafic)."+(ageJ>183?" Attention : tracés vieux de "+ageJ+" jours (plus de 6 mois) : à recalculer avant tout usage réel.":"")+" Trajets à plusieurs : conducteur, prises en charge puis site, tracés sur les routes quand les tronçons sont précalculés, sinon en pointillé : "+tracesReelles+" trajet(s) tracé(s) sur "+ts.length+"."}),
   simBandeau("Domiciles inventés (calés sur la route la plus proche pour le calcul). Fond Plan IGN sous Licence Ouverte, service public Géoplateforme sans garantie de continuité. Important : en affichant la carte, votre navigateur envoie votre adresse IP et la zone affichée au serveur de tuiles IGN. Ce sont des données réelles du visiteur, même si tous les profils sont inventés. Les tracés viennent d'un précalcul ponctuel sur le serveur de démonstration OSRM (sans garantie, ne convient pas à un produit). Détail dans SOURCES.md.")));
  el.querySelector(".carte").append(h("p",{class:"doux"},h("a",{href:"https://cartes.gouv.fr/rechercher-une-donnee/dataset/IGNF_PLAN-IGN",text:"Source et métadonnées Plan IGN (IGN, flux mis à jour en continu)"})," · ",h("a",{href:"https://www.etalab.gouv.fr/licence-ouverte-open-licence/",text:"Licence Ouverte 2.0"})));
@@ -285,12 +299,13 @@ function vueCarte(){
   el.querySelector(".carte").append(det);
   detTrajet();
  }else{
-  el.querySelector(".carte").append(h("p",{class:"doux",text:"Aucun trajet sélectionné : cliquez un tracé coloré ou un point de prise en charge pour un trajet, un rond ou un losange pour voir les trajets d'une personne, ou choisissez dans « Choisir un trajet à détailler »."}));
+  el.querySelector(".carte").append(h("p",{class:"doux",text:"Aucun trajet sélectionné : touchez une carte horaire au-dessus de la carte, une pastille d'heure ou un tracé coloré pour un trajet, ou un rond ou un losange pour voir les trajets d'une personne."}));
  }
  function detTrajet(){const b=$("#detail-trajet");if(!b)return;
  if(S.preview){b.replaceChildren(h("div",{class:"sim",text:"Préparation fictive : "+[sel.drv,...sel.pax].map(q=>q.nom).join(" + ")+". Ce groupe n'est pas réservé. Aucun accord existant n'est changé et aucun gain n'est ajouté au bilan."}),h("p",{text:"Départ "+E.hm(sel.ev.depart)+", arrivée "+E.hm(sel.ev.arrive)+", "+f1(sel.ev.km)+" km, détour "+f1(sel.ev.detour)+" km."}),h("div",{class:"barre-outils"},h("button",{onclick:()=>choisirGroupe(sel,S.profil),text:sel.pax.length===2?"Garder ce trinôme comme groupe habituel (simulation)":"Garder ce binôme comme groupe habituel (simulation)"}),h("button",{onclick:()=>{S.preview=null;S.cartePers=S.profil;vueCarte()},text:"Revenir aux partenaires"})));return}
  b.replaceChildren(carteTrajet(sel),actionsCarte(sel,S.carteJour,S.carteDir),h("div",{class:"barre-outils"},groupe(sel).includes(S.profil)?h("button",{onclick:()=>choisirGroupe(sel,S.profil),text:"Garder ce groupe habituel (simulation)"}):h("span",{class:"doux",text:"Choisissez un profil de ce groupe pour le garder comme habitude."})))
  }
+ {const cur=rail.querySelector(".actif");if(cur)rail.scrollLeft=Math.max(0,cur.offsetLeft-(rail.clientWidth-cur.offsetWidth)/2)}
  el.querySelector(".carte").append(panneauDeplace());
  const i1=el.querySelector(".leg i.d1"),i2=el.querySelector(".leg i.d2");i1.style.background="#6b1d2c";i2.style.background="#b9802f";
  const liste=h("ol",{class:"liste-carte"},ts.map(t=>h("li",null,h("b",{text:t.drv.nom}),(" conduit : "+t.ev.pts.slice(0,-1).length+" arrêt(s) avant le site, départ "+E.hm(t.ev.depart)+", arrivée "+E.hm(t.ev.arrive)+", "+f1(t.ev.km)+" km, détour "+f1(t.ev.detour)+" km. Passagers : "+t.pax.map(x=>x.nom+(x.mode==="gare"?" (gare "+x.gare.nom+")":" (domicile)")).join(", ")+"."))));
