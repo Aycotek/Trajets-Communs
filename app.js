@@ -259,7 +259,7 @@ function vueFin(){
   return h("tr",null,h("td",{text:n+" ("+String(c).replace(".",",")+" €/km)"}),h("td",{class:"num",text:eur(L.dec.eurPax)}),h("td",{class:"num",text:eur(L.dec.eurDrv)}),h("td",{class:"num",text:eur(L.cor.eurPax)}),h("td",{class:"num",text:eur(L.cor.eurDrv)}))});
  el.append(h("div",{class:"carte"},h("h2",{text:"Euros : sensibilité au coût par km (une semaine)"}),
   h("p",{class:"doux",text:"Le coût au km est l'hypothèse la plus fragile du volet financier. Les euros sont une économie ou un surcoût pour les participants, pas de l'argent versé : aucun paiement n'existe dans cette démonstration. Le partage de frais reste borné par la règle de non-profit du conducteur (voir cadrage)."}),
-  h("table",{class:"tab"},h("thead",null,h("tr",null,h("th",{rowspan:"2",text:"Hypothèse"}),h("th",{colspan:"2",class:"grp",text:"Déclaré"}),h("th",{colspan:"2",class:"grp",text:"Corroboré"})),h("tr",null,["Passagers","Conducteurs","Passagers","Conducteurs"].map(t=>h("th",{text:t})))),h("tbody",null,rows)),
+  h("table",{class:"tab"},h("thead",null,h("tr",null,h("th",{rowspan:"2",text:"Hypothèse"}),h("th",{colspan:"2",class:"grp",text:"Déclaré"}),h("th",{colspan:"2",class:"grp",text:"Corroboré"})),h("tr",null,["Passagers","Conducteurs","Passagers","Conducteurs"].map(t=>h("th",null,h("span",{class:"sr-only",text:t}),h("span",{"aria-hidden":"true",text:t==="Passagers"?"Pass.":"Cond."}))))),h("tbody",null,rows)),
   h("p",{class:"doux",text:"Un montant négatif pour les passagers signifie qu'ils paient plus que leur alternative dans ce modèle. Lecture à confirmer avec la règle de partage de frais retenue par l'entreprise."})));
 }
 
