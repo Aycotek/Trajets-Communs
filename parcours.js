@@ -30,11 +30,26 @@ function sauve(){try{sessionStorage.setItem("tc_parcours",JSON.stringify({commun
 function domicileFictif(nom){const c=D.COMMUNES.find(x=>x.n===nom);const loc=pop.filter(x=>x.commune===nom);const liste=loc.length?loc:pop;let best=liste[0];for(const x of liste)if(E.hav(x.home,c)<E.hav(best.home,c))best=x;return {home:best.home,exact:loc.length>0}}
 function calcule(){
  const c=D.COMMUNES.find(x=>x.n===st.commune),d=domicileFictif(st.commune);
- const arr=st.dep+tt(d.home,D.SITE);
- const jours=[0,1,2,3,4].map(()=>({present:true,a0:Math.round(arr-15),a1:Math.round(arr+15),d0:st.quit-15,d1:st.quit+15}));
- st.vous={id:"VOUS",nom:"Vous",commune:c.n,home:d.home,role:"flexible",aVoiture:true,mode:"domicile",gare:null,adresse:"",jours};
- st.exact=d.exact;st.arr=arr;
- st.match=pop.map(y=>({y,trips:E.match([st.vous,y],p).trips.filter(t=>t.dir!=="matin"||Math.abs(monHoraire(t).quand-st.dep)<=15),n:0,det:0}));
+ const solo=tt(d.home,D.SITE);
+ st.vous={id:"VOUS",nom:"Vous",commune:c.n,home:d.home,role:"flexible",aVoiture:true,mode:"domicile",gare:null,adresse:"",jours:null};
+ st.exact=d.exact;st.arr=st.dep+solo;
+ /* Le moteur raisonne en heure d'arrivée au site. On cherche donc, pour chaque personne et chaque jour, l'arrivée qui donne EXACTEMENT votre heure de départ
+    (domicile le matin, travail le soir) : on corrige l'arrivée visée tant que votre heure de départ calculée s'écarte de celle saisie. Écart final accepté : 10 min au plus. */
+ function tripsPour(y){
+  const out=new Map();
+  for(const o of [0,-5,5,-10,10]){
+   const T=st.dep+o,Q=st.quit+o,A=[0,1,2,3,4].map(()=>Math.round(T+solo));let trips=[];
+   for(let k=0;k<5;k++){
+    st.vous.jours=A.map(a=>({present:true,a0:a,a1:a,d0:Q,d1:Q}));
+    trips=E.match([st.vous,y],p).trips;let ch=false;
+    trips.filter(t=>t.dir==="matin").forEach(t=>{const dd=Math.round(T-monHoraire(t).quand);if(dd!==0&&Math.abs(dd)<=20){A[t.day]+=dd;ch=true}});
+    if(!ch)break;
+   }
+   trips.forEach(t=>{const key=t.day+t.dir;if(out.has(key))return;if(t.dir==="matin"?Math.abs(monHoraire(t).quand-st.dep)>10:Math.abs(t.ev.depart-st.quit)>10)return;out.set(key,t)});
+  }
+  return [...out.values()];
+ }
+ st.match=pop.map(y=>({y,trips:tripsPour(y),n:0,det:0}));
  st.match.forEach(m=>{m.trips.forEach(t=>{m.n++;m.det+=t.ev.detour})});
  const ok=st.match.filter(m=>m.n>0).sort((a,b)=>b.n-a.n||a.det/a.n-b.det/b.n||E.hav(st.vous.home,a.y.home)-E.hav(st.vous.home,b.y.home));
  st.best=ok.length?ok[0]:null;st.nbPartenaires=ok.length;
@@ -93,10 +108,10 @@ function carte(opts){
  svg.append(sv("polygon",{points:[[s0.x,s0.y-r0*1.6],[s0.x+r0*1.4,s0.y+r0],[s0.x-r0*1.4,s0.y+r0]].map(q=>q.join(",")).join(" "),fill:"#3e0f19",stroke:"#fff","stroke-width":f*.4}));
  svg.append(sv("text",{x:s0.x+r0*1.8,y:s0.y-r0*.5,"font-size":13*f*.85,"font-weight":"700",fill:"#3e0f19",stroke:"#fff","stroke-width":f,"paint-order":"stroke"},"Site d'arrivée"));
  const posees=[];
- badges.forEach(([o,i,c,faint])=>{const t=o.t,dir=t.dir,anchor=dir==="matin"?t.ev.pts[0]:D.SITE,a=P(anchor),txt=hm(t.ev.depart),fs=12.5*f*.85,w=fs*3.1,hh=fs*1.8;
+ badges.forEach(([o,i,c,faint])=>{const t=o.t,dir=t.dir,anchor=dir==="matin"?st.vous.home:D.SITE,a=P(anchor),txt=hm(dir==="matin"?monHoraire(t).quand:t.ev.depart),fs=12.5*f*.85,w=fs*3.1,hh=fs*1.8;
   const sg=dir==="matin"?-1:1;let y0=dir==="matin"?a.y-6*f*.85-hh-fs*.25:a.y+8*f*.85;for(let k=0;k<8&&posees.some(q=>Math.abs(q[0]-a.x)<w&&Math.abs(q[1]-y0)<hh*.95);k++)y0+=sg*hh*1.05;posees.push([a.x,y0]);
   const g=sv("g",{class:"trace badge-heure",opacity:faint?".75":"1"});
-  g.append(sv("rect",{x:a.x-w/2,y:y0,width:w,height:hh,rx:hh/2,fill:c,stroke:"#fff","stroke-width":f*.6}),sv("text",{x:a.x,y:y0+hh*.7,"text-anchor":"middle","font-size":fs,"font-weight":"700",fill:"#fff"},txt),sv("title",null,"Départ "+txt+" : voir ce trajet"));
+  g.append(sv("rect",{x:a.x-w/2,y:y0,width:w,height:hh,rx:hh/2,fill:c,stroke:"#fff","stroke-width":f*.6}),sv("text",{x:a.x,y:y0+hh*.7,"text-anchor":"middle","font-size":fs,"font-weight":"700",fill:"#fff"},txt),sv("title",null,(dir==="matin"?"Votre départ ":"Départ du site ")+txt+" : voir ce trajet"));
   g.addEventListener("click",()=>{st.sel=i;rend()});svg.append(g)});
  if(st.vous){const a=P(st.vous.home),r=8*f*.85;
   svg.append(sv("circle",{cx:a.x,cy:a.y,r:r*1.6,fill:"#e3b765","fill-opacity":".35",stroke:"#8f5f16","stroke-width":f*.5}));
@@ -120,7 +135,7 @@ function recap(){
 function etapes(){
  const n=st.etape;
  const titres=["Où habitez-vous ?","À quelle heure partez-vous de chez vous le matin ?","À quelle heure quittez-vous le travail le soir ?"];
- const aides=["Choisissez votre commune. Aucune adresse n'est demandée : la démonstration couvre "+COMMUNES.length+" communes autour du site d'arrivée.","Heure à laquelle vous quittez votre domicile pour aller travailler. Tolérance utilisée : 15 minutes avant ou après.","Heure à laquelle vous quittez le site pour rentrer. Tolérance utilisée : 15 minutes avant ou après."];
+ const aides=["Choisissez votre commune. Aucune adresse n'est demandée : la démonstration couvre "+COMMUNES.length+" communes autour du site d'arrivée.","Heure à laquelle vous quittez votre domicile pour aller travailler. Les propositions restent à 10 minutes maximum de cette heure.","Heure à laquelle vous quittez le travail pour rentrer. Les propositions restent à 10 minutes maximum de cette heure."];
  const t=h("h2",{id:"pc-titre",tabindex:"-1",text:titres[n-1]});focus=t;
  const card=h("div",{class:"carte pc-carte"},
   h("div",{class:"pc-prog","aria-label":"Étape "+n+" sur 3"},[1,2,3].map(i=>h("i",{class:i<=n?"on":""}))),
@@ -155,7 +170,7 @@ function railOptions(){
  const rail=h("div",{class:"rail-trajets",role:"group","aria-label":"Trajets proposés pour ce jour, avec les horaires"});
  st.options.forEach((o,i)=>{const t=o.t,mh=monHoraire(t),on=i===st.sel;
   const b=h("button",{type:"button",class:"horaire"+(on?" actif":""),"aria-pressed":String(on),onclick:()=>{st.sel=i;rend(true)}},
-   h("b",{text:hm(t.ev.depart)+" → "+hm(t.ev.arrive)}),h("span",{text:nomCourt(o.m.y)+" · "+(mh.conduit?"vous conduisez":"vous êtes passager")}),o.reco?h("span",{class:"pc-reco-etiq",text:"Recommandé"}):null);
+   h("b",{text:(st.dir==="matin"?"Départ ":"Départ du site ")+hm(st.dir==="matin"?mh.quand:t.ev.depart)}),h("span",{text:(st.dir==="matin"?"arrivée "+hm(t.ev.arrive):"chez vous ~"+hm(mh.conduit?t.ev.arrive:mh.quand))+" · "+nomCourt(o.m.y)}),h("span",{text:mh.conduit?"vous conduisez":"vous êtes passager"}),o.reco?h("span",{class:"pc-reco-etiq",text:"Recommandé"}):null);
   b.style.setProperty("--c",col[i%col.length]);rail.append(b)});
  return rail;
 }
@@ -168,10 +183,11 @@ function detail(){
  box.append(h("h3",{text:jr+(st.dir==="matin"?" matin":" soir")+" avec "+y.nom+" · "+y.commune}));
  const lignes=[];
  if(st.dir==="matin"){
-  lignes.push(mh.conduit?"Vous conduisez : départ de chez vous à "+hm(t.ev.depart)+(t.pax.length?", vous prenez "+t.pax.map(x=>x.nom).join(" et ")+" en chemin":"")+".":"Vous êtes pris en charge près de chez vous vers "+hm(mh.quand)+" par "+t.drv.nom+".");
+  lignes.push(mh.conduit?"Vous conduisez : départ de chez vous à "+hm(t.ev.depart)+(t.pax.length?", vous prenez "+t.pax.map(x=>x.nom).join(" et ")+" en chemin":"")+".":"Vous êtes pris en charge près de chez vous vers "+hm(mh.quand)+" par "+t.drv.nom+", dont le départ est à "+hm(t.ev.depart)+".");
+  lignes.push("Vous aviez indiqué "+hm(st.dep)+" : écart de "+Math.round(Math.abs(mh.quand-st.dep))+" min.");
   lignes.push("Arrivée au site à "+hm(t.ev.arrive)+".");
  }else{
-  lignes.push("Départ du site à "+hm(t.ev.depart)+(mh.conduit?", vous conduisez.":", avec "+t.drv.nom+" au volant."));
+  lignes.push("Départ du travail à "+hm(t.ev.depart)+(mh.conduit?", vous conduisez.":", avec "+t.drv.nom+" au volant.")+" Vous aviez indiqué "+hm(st.quit)+" : écart de "+Math.round(Math.abs(t.ev.depart-st.quit))+" min.");
   lignes.push(mh.conduit?"Retour chez vous vers "+hm(t.ev.arrive)+".":"Vous êtes déposé près de chez vous vers "+hm(mh.quand)+".");
  }
  lignes.push("Trajet du conducteur : "+f1(t.ev.km)+" km"+(t.ev.detour>0.05?", dont "+f1(t.ev.detour)+" km de détour pour vous prendre":"")+".");
@@ -199,12 +215,12 @@ function rend(garderPos){
    const cz=h("div",{class:"carte pc-carte-zone"});
    cz.append(railOptions(),h("div",{class:"carte-zone"},carte({options:st.options,sel:st.options[st.sel]?st.options[st.sel].t:null})),jours(),detail());
    wrap.append(cz);
-   const liste=h("ol",{class:"liste-carte"},st.options.map(o=>{const mh=monHoraire(o.t);return h("li",null,h("b",{text:o.m.y.nom}),(" : départ "+hm(o.t.ev.depart)+", arrivée "+hm(o.t.ev.arrive)+", "+(mh.conduit?"vous conduisez":"vous êtes passager")+".")) }));
+   const liste=h("ol",{class:"liste-carte"},st.options.map(o=>{const mh=monHoraire(o.t);return h("li",null,h("b",{text:o.m.y.nom}),(" : "+(st.dir==="matin"?"votre départ "+hm(mh.quand)+", arrivée "+hm(o.t.ev.arrive):"départ du travail "+hm(o.t.ev.depart)+", chez vous vers "+hm(mh.conduit?o.t.ev.arrive:mh.quand))+", "+(mh.conduit?"vous conduisez":"vous êtes passager")+".")) }));
    wrap.append(h("details",{class:"carte"},h("summary",{text:"Version texte de la carte ("+st.options.length+" trajet(s) "+JN[st.jour]+")"}),st.options.length?liste:h("p",{class:"doux",text:"Aucun trajet ce jour et ce sens."})));
   }else wrap.append(h("div",{class:"carte pc-carte-zone"},h("div",{class:"carte-zone"},carte({options:[],sel:null}))));
  }
  wrap.append(h("p",{id:"pc-tuiles",class:"note-limite",hidden:"",text:"Le fond de carte Plan IGN n'a pas pu être chargé, ou seulement en partie. Les trajets et la version texte restent utilisables."}));
- wrap.append(h("div",{class:"sim",role:"note"},"Démonstration : 28 profils inventés, aucun compte, aucun vrai collègue, rien n'est envoyé ni réservé. "+(st.vous?"Vous êtes supposé flexible (conducteur ou passager selon le trajet) ; "+st.nbPartenaires+" profils sur "+pop.length+" ont au moins un trajet compatible avec vos horaires. Votre point de départ est un domicile fictif de "+st.commune+(st.exact?"":" (le plus proche, cette commune n'en compte pas dans le jeu)")+", pour utiliser les durées routières précalculées. Trajets en pointillé : tracé indicatif, tronçon routier non précalculé. ":"")+"Fond Plan IGN : votre navigateur envoie votre adresse IP et la zone affichée au serveur de tuiles IGN."));
+ wrap.append(h("div",{class:"sim",role:"note"},"Démonstration : 28 profils inventés, aucun compte, aucun vrai collègue, rien n'est envoyé ni réservé. "+(st.vous?"Vous êtes supposé flexible (conducteur ou passager selon le trajet) ; "+st.nbPartenaires+" profils sur "+pop.length+" ont au moins un trajet compatible avec vos horaires. Votre point de départ est un domicile fictif de "+st.commune+(st.exact?"":" (le plus proche, cette commune n'en compte pas dans le jeu)")+", pour utiliser les durées routières précalculées. Les pastilles donnent votre heure de départ (matin) ou de départ du travail (soir). Trajets en pointillé : tracé indicatif, tronçon routier non précalculé. ":"")+"Fond Plan IGN : votre navigateur envoie votre adresse IP et la zone affichée au serveur de tuiles IGN."));
  wrap.append(h("p",{class:"doux pc-lien"},"Voir tous les trajets de la démonstration dans l'onglet ",h("button",{type:"button",class:"pc-lien-btn",onclick:()=>{const b=document.querySelector('.onglets button[data-vue="carte"]');if(b)b.click()},text:"Carte"}),"."));
  root.append(wrap);
  if(garderPos){window.scrollTo(0,y0)}
