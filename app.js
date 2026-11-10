@@ -214,12 +214,24 @@ function vueProfil(){
  const sel=h("select",{"aria-label":"Profil",onchange:e=>{S.profil=e.target.value;vueProfil()}},S.pop.map(q=>h("option",{value:q.id,text:q.nom+" ("+q.role+")"})));sel.value=S.profil;
  const tbl=h("table",{class:"tab"},h("thead",null,h("tr",null,["Jour","Présent","Arrivée entre","Départ entre"].map(t=>h("th",{text:t})))));
  const tb=h("tbody");
- const toT=m=>E.hm(m),fromT=v=>{const a=v.split(":");return (+a[0])*60+(+a[1])};
+ const toT=m=>E.hm(m);
+ const LABS={a0:"Arrivée entre, début",a1:"Arrivée entre, fin",d0:"Départ entre, début",d1:"Départ entre, fin"};
+ const PAIRE={a0:"a1",a1:"a0",d0:"d1",d1:"d0"};
+ const parseHM=v=>{const m=/^\s*(\d{1,2})\s*(?:[:hH]\s*(\d{2}))?\s*$/.exec(v||"");if(!m)return null;const H=+m[1],M=m[2]?+m[2]:0;if(H>23||M>59)return null;return H*60+M;};
  x.jours.forEach((j,i)=>{
   const cb=h("input",{type:"checkbox","aria-label":"Présent "+E.JOURS[i],onchange:e=>{j.present=e.target.checked;refresh()}});cb.checked=j.present;
-  const tin=(key)=>{const out=h("output",{class:"h24",title:"format 24 heures",text:toT(j[key])});
-   const t=h("input",{type:"time",value:toT(j[key]),"aria-label":key+" "+E.JOURS[i]+" (format 24 heures)",onchange:e=>{if(e.target.value){j[key]=fromT(e.target.value);out.textContent=e.target.value;refresh()}}});
-   return h("span",{class:"h24-wrap"},t,out)};
+  const tin=(key)=>{const msg=h("span",{class:"hm-err",role:"alert"});
+   const t=h("input",{type:"text",class:"hm",inputmode:"numeric",maxlength:"5",placeholder:"07:30",value:toT(j[key]),
+    "aria-label":LABS[key]+" "+E.JOURS[i]+", format 24 heures, par exemple 07:30",
+    onchange:e=>{const inp=e.target,m=parseHM(inp.value);
+     const ko=t2=>{inp.classList.add("ko");inp.setAttribute("aria-invalid","true");msg.textContent=t2};
+     if(m===null)return ko("Heure invalide : écris par exemple 07:30 (de 00:00 à 23:59).");
+     const autre=j[PAIRE[key]],debut=key==="a0"||key==="d0";
+     if(debut&&m>autre)return ko("Le début doit être avant la fin ("+E.hm(autre)+").");
+     if(!debut&&m<autre)return ko("La fin doit être après le début ("+E.hm(autre)+").");
+     inp.classList.remove("ko");inp.removeAttribute("aria-invalid");msg.textContent="";
+     inp.value=E.hm(m);if(m!==j[key]){j[key]=m;refresh()}}});
+   return h("span",{class:"hm-wrap"},t,msg)};
   tb.append(h("tr",null,h("td",{text:E.JOURS[i]}),h("td",null,cb,j.present?"":" congé"),h("td",null,h("div",{class:"plage"},tin("a0"),tin("a1"))),h("td",null,h("div",{class:"plage"},tin("d0"),tin("d1")))));
  });
  tbl.append(tb);
@@ -229,7 +241,7 @@ function vueProfil(){
   h("p",null,h("b",{text:x.nom}),", "+x.commune+", "+(x.aVoiture?(x.role==="flexible"?"a une voiture et accepte d'alterner":"a une voiture et conduit"):"n'a pas de voiture")+(x.mode==="gare"?", arrive par la gare "+x.gare.nom:", prise en charge à domicile")),
   h("p",{class:"doux",text:"Adresse fictive : "+x.adresse}),
   tbl,
-  h("p",{class:"doux",text:"Chaque changement relance l'appariement : décale une plage ou pose un congé, puis regarde l'onglet Trajets."}),
+  h("p",{class:"doux",text:"Les heures se saisissent au format 24 heures (par exemple 07:30 ou 7h30). Chaque changement relance l'appariement : décale une plage ou pose un congé, puis regarde l'onglet Trajets."}),
   h("div",{id:"mes-trajets"})));
  function mes(){const box=$("#mes-trajets");box.replaceChildren();
   const ts=S.res.trips.filter(t=>t.drv.id===x.id||t.pax.some(q=>q.id===x.id));
@@ -247,7 +259,7 @@ function vueFin(){
   return h("tr",null,h("td",{text:n+" ("+String(c).replace(".",",")+" €/km)"}),h("td",{class:"num",text:eur(L.dec.eurPax)}),h("td",{class:"num",text:eur(L.dec.eurDrv)}),h("td",{class:"num",text:eur(L.cor.eurPax)}),h("td",{class:"num",text:eur(L.cor.eurDrv)}))});
  el.append(h("div",{class:"carte"},h("h2",{text:"Euros : sensibilité au coût par km (une semaine)"}),
   h("p",{class:"doux",text:"Le coût au km est l'hypothèse la plus fragile du volet financier. Les euros sont une économie ou un surcoût pour les participants, pas de l'argent versé : aucun paiement n'existe dans cette démonstration. Le partage de frais reste borné par la règle de non-profit du conducteur (voir cadrage)."}),
-  h("table",{class:"tab"},h("thead",null,h("tr",null,["Hypothèse","Passagers, déclaré","Conducteurs, déclaré","Passagers, corroboré","Conducteurs, corroboré"].map(t=>h("th",{text:t})))),h("tbody",null,rows)),
+  h("table",{class:"tab"},h("thead",null,h("tr",null,h("th",{rowspan:"2",text:"Hypothèse"}),h("th",{colspan:"2",class:"grp",text:"Déclaré"}),h("th",{colspan:"2",class:"grp",text:"Corroboré"})),h("tr",null,["Passagers","Conducteurs","Passagers","Conducteurs"].map(t=>h("th",{text:t})))),h("tbody",null,rows)),
   h("p",{class:"doux",text:"Un montant négatif pour les passagers signifie qu'ils paient plus que leur alternative dans ce modèle. Lecture à confirmer avec la règle de partage de frais retenue par l'entreprise."})));
 }
 

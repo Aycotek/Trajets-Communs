@@ -100,3 +100,33 @@ fr.addEventListener("load",async()=>{await sleep(6000);const o=[];let f4=0;const
   V(tabs[0].getAttribute("aria-selected")==="true"&&tabs[1].getAttribute("aria-selected")==="false","aria-selected à jour");
  }catch(e){o.push("ECHEC exception clavier : "+e.message);f4++}
  document.getElementById("res").textContent+="\n--- clavier ---\n"+o.join("\n")+"\n"+(f4?f4+" ECHEC(S) clavier":"CLAVIER OK");});
+
+/* Saisie des heures : champ texte 24 heures, validation accessible */
+fr.addEventListener("load",async()=>{await sleep(7500);const o=[];let f5=0;const V=(c,m)=>{o.push((c?"OK   ":"ECHEC ")+m);if(!c)f5++};
+ try{const d=fr.contentDocument;d.querySelector('.onglets button[data-vue="profil"]').click();await sleep(150);
+  const champs=()=>[...d.querySelectorAll("#vue-profil input.hm")];
+  V(champs().length===20,"20 champs horaires au format texte (5 jours x 4 bornes)");
+  const c0=champs()[0];const v0=c0.value;
+  V(/^\d{2}:\d{2}$/.test(v0),"valeur initiale affichée en 24 heures ("+v0+")");
+  c0.value="7h35";c0.dispatchEvent(new Event("change"));await sleep(150);
+  const c0b=champs()[0];V(c0b.value==="07:35","saisie « 7h35 » normalisée en 07:35 ("+c0b.value+")");
+  const c1=champs()[1];c1.value="25:99";c1.dispatchEvent(new Event("change"));await sleep(120);
+  const c1b=champs()[1];
+  V(c1b.classList.contains("ko")&&c1b.getAttribute("aria-invalid")==="true","heure impossible refusée, champ marqué invalide");
+  const err=c1b.parentElement.querySelector(".hm-err");
+  V(err&&/Heure invalide/.test(err.textContent),"message d'erreur lisible et annoncé (role alert)");
+  const v1=champs()[1].value;c1b.value="06:00";c1b.dispatchEvent(new Event("change"));await sleep(120);
+  V(champs()[1].classList.contains("ko")&&/après le début/.test(champs()[1].parentElement.querySelector(".hm-err").textContent),"borne de fin avant le début refusée avec explication");
+ }catch(e){V(false,"exception saisie "+e.message)}
+ document.getElementById("res").textContent+="\n--- saisie heures ---\n"+o.join("\n")+"\n"+(f5?f5+" ECHEC(S) saisie":"SAISIE OK");
+});
+/* Largeur : aucun débordement horizontal à 390 px sur chaque onglet */
+fr.addEventListener("load",async()=>{await sleep(9500);const o=[];let f6=0;const V=(c,m)=>{o.push((c?"OK   ":"ECHEC ")+m);if(!c)f6++};
+ try{fr.style.width="390px";fr.style.height="1200px";const d=fr.contentDocument;await sleep(250);
+  for(const vue of ["dg","semaine","trajets","carte","profil","controles","reglages","reel"]){
+   d.querySelector('.onglets button[data-vue="'+vue+'"]').click();await sleep(200);
+   const sw=d.documentElement.scrollWidth,iw=d.defaultView.innerWidth;
+   V(sw<=iw,"onglet "+vue+" : pas de débordement horizontal à 390 px ("+sw+" <= "+iw+")");}
+ }catch(e){V(false,"exception largeur "+e.message)}
+ document.getElementById("res").textContent+="\n--- largeur 390px ---\n"+o.join("\n")+"\n"+(f6?f6+" ECHEC(S) largeur":"LARGEUR OK");
+});

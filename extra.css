@@ -72,10 +72,21 @@ svg.carte-svg{width:100%;height:auto;background:rgba(255,250,243,.7);border:1px 
 .case-sem details,.sim details{margin-top:4px}.case-sem details p,.sim details p{margin:4px 0}
 .puce-etat{font-size:.8rem}.doux{font-size:.88rem}.sim{font-size:.86rem}
 
-.h24-wrap{display:inline-flex;flex-direction:column;align-items:flex-start;gap:0}
-.h24{font-size:.72rem;color:var(--doux);min-width:32px}
+.hm-wrap{display:inline-flex;flex-direction:column;gap:1px}
+.hm{width:4.6em;text-align:center;font:inherit;padding:3px 2px;border:1px solid var(--bord);border-radius:8px;background:#fffdf8;color:var(--encre)}
+.hm.ko{border-color:#a1122b;box-shadow:0 0 0 2px #a1122b33}
+.hm-err{color:#7a1020;font-size:.72rem;max-width:11em;line-height:1.2}
+.hm-err:empty{display:none}
 .ligne-cx{display:flex;gap:8px;align-items:center;margin:10px 0;font-weight:600}
 .ligne-cx input{width:20px;height:20px;accent-color:#6b1d2c}
 html.cx{--doux:#463234;--bord:rgba(62,15,25,.55);--verre:#fffaf2;--verre-fort:#fff}
 html.cx .fond-deco{display:none}
 html.cx .carte,html.cx .kpi,html.cx .bandeau-budget,html.cx .hero{background:#fffaf2}
+/* Table de sensibilité : tient dans 390 px sans débordement */
+#vue-dg .tab{table-layout:fixed}
+#vue-dg .tab th:first-child,#vue-dg .tab td:first-child{width:30%}
+#vue-dg .tab th,#vue-dg .tab td{overflow-wrap:break-word}
+#vue-dg .tab td.num{white-space:normal}
+#vue-dg .tab th,#vue-dg .tab td{hyphens:auto}
+#vue-dg .tab th{font-size:.7rem}
+#vue-dg .tab th.grp{text-align:center;border-bottom:1px solid var(--bord)}
