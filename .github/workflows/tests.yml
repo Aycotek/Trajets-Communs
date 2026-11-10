@@ -17,3 +17,5 @@ jobs:
           grep -q "CARTE OK" dom.html
           grep -q "ALÉAS OK" dom.html
           grep -q "CLAVIER OK" dom.html
+          grep -q "SAISIE OK" dom.html
+          grep -q "LARGEUR OK" dom.html
