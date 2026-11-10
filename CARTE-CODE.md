@@ -45,7 +45,7 @@ flowchart TD
   M2 --> V
 ```
 
-## Invariants maintenus par les tests (3325 vérifications)
+## Invariants maintenus par les tests (3328 vérifications)
 
 ```mermaid
 flowchart LR

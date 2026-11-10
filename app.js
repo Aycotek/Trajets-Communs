@@ -220,8 +220,7 @@ function vueProfil(){
  const el=$("#vue-profil");el.replaceChildren();
  const x=byId(S.profil);
  const sel=h("select",{"aria-label":"Profil",onchange:e=>{S.profil=e.target.value;vueProfil()}},S.pop.map(q=>h("option",{value:q.id,text:q.nom+" ("+q.role+")"})));sel.value=S.profil;
- const entete=t=>{const court={"Présent":"Prés.","Arrivée entre":"Arrivée","Départ entre":"Départ"}[t];return court?h("th",null,h("span",{"aria-hidden":"true",text:court}),h("span",{class:"sr-only",text:t})):h("th",{text:t})};
- const tbl=h("table",{class:"tab"},h("thead",null,h("tr",null,["Jour","Présent","Arrivée entre","Départ entre"].map(entete))));
+ const tbl=h("table",{class:"tab"},h("thead",null,h("tr",null,["Jour","Présent","Arrivée entre","Départ entre"].map(t=>h("th",{text:t})))));
  const tb=h("tbody");
  const toT=m=>E.hm(m);
  const LABS={a0:"Arrivée entre, début",a1:"Arrivée entre, fin",d0:"Départ entre, début",d1:"Départ entre, fin"};
@@ -241,7 +240,7 @@ function vueProfil(){
      inp.classList.remove("ko");inp.removeAttribute("aria-invalid");msg.textContent="";
      inp.value=E.hm(m);if(m!==j[key]){j[key]=m;refresh()}}});
    return h("span",{class:"hm-wrap"},t,msg)};
-  tb.append(h("tr",null,h("td",{text:E.JOURS[i]}),h("td",null,cb,j.present?"":" congé"),h("td",null,h("div",{class:"plage"},tin("a0"),tin("a1"))),h("td",null,h("div",{class:"plage"},tin("d0"),tin("d1")))));
+  tb.append(h("tr",null,h("td",{text:E.JOURS[i]}),h("td",{"data-l":"Présent"},cb,j.present?"":" congé"),h("td",{"data-l":"Arrivée entre"},h("div",{class:"plage"},tin("a0"),tin("a1"))),h("td",{"data-l":"Départ entre"},h("div",{class:"plage"},tin("d0"),tin("d1")))));
  });
  tbl.append(tb);
  el.append(h("div",{class:"carte"},h("h2",{text:"Profil de démonstration"}),
@@ -393,7 +392,12 @@ function vueReglages(){
  cx.addEventListener("change",()=>{S.cx=cx.checked;document.documentElement.classList.toggle("cx",S.cx);try{sessionStorage.setItem("tc_cx",S.cx?"1":"")}catch(_){};});
  c.append(h("label",{class:"ligne-cx"},cx,"Contraste renforcé : textes et bordures plus marqués, décor retiré (mémorisé le temps de la session)"));
  D.PARAMS.forEach(x=>c.append(champ(x.l,S.p[x.k],x.step,x.min,x.max,v=>{S.p[x.k]=v;recompute();vueDG();vueTrajets();vueCarte();vueControles();vueProfil();vueSemaine()},x.src)));
- c.append(h("div",{class:"barre-outils"},h("button",{onclick:()=>{S.p=E.defaults();recompute();all()},text:"Revenir aux valeurs initiales"})));
+ const exporter=()=>{const etat={demonstration:true,avertissement:"État fictif de démonstration : profils, adresses, choix et traces sont inventés, aucune donnée réelle ni interne.",exporteLe:new Date().toISOString(),choixSimules:S.dec,recurrences:S.recur,tracesDeTest:S.out};
+  const blob=new Blob([JSON.stringify(etat,null,1)],{type:"application/json"});const u=URL.createObjectURL(blob);
+  const a=h("a",{href:u,download:"trajets-communs-etat-simule.json"});document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)};
+ c.append(h("div",{class:"barre-outils"},h("button",{onclick:()=>{S.p=E.defaults();recompute();all()},text:"Revenir aux valeurs initiales"}),
+  h("button",{onclick:exporter,text:"Exporter l'état simulé (JSON)"})));
+ c.append(h("p",{class:"doux",text:"L'export ne contient que l'état fictif de cette session (choix simulés, récurrences, traces de test) : il reste dans votre navigateur, rien n'est envoyé."}));
  el.append(c);
 }
 

@@ -113,15 +113,23 @@ p,.doux,.sim,.note-limite,.src,li,summary,.case-sem,.leg,.puce-etat{overflow-wra
 .case-tete>*{min-width:0}
 .puce-etat{white-space:normal;text-align:center}
 
-/* Profil : la grille horaire respire sur petit écran et zoom 200 % */
+/* Profil : sous 480 px (dont zoom 200 %), la grille horaire devient des blocs par jour à libellés explicites */
 @media (max-width:480px){
- #vue-profil .tab th:nth-child(1),#vue-profil .tab td:first-child{width:17%}
- #vue-profil .tab th:nth-child(2),#vue-profil .tab td:nth-child(2){width:11%}
- #vue-profil .tab th:nth-child(3),#vue-profil .tab td:nth-child(3){width:35%}
- #vue-profil .tab th:nth-child(4),#vue-profil .tab td:nth-child(4){width:35%}
- #vue-profil .tab th,#vue-profil .tab td{padding:4px 1px}
- #vue-profil .tab th{font-size:.62rem;letter-spacing:-.01em}
- #vue-profil .tab td:first-child{font-size:.78rem}
- #vue-profil .plage{display:flex;flex-wrap:wrap;gap:2px}
- #vue-profil .hm{width:3.9em;font-size:.82rem}
+ #vue-profil .tab thead{position:absolute;left:-9999px}
+ #vue-profil .tab,#vue-profil .tab tbody,#vue-profil .tab tr,#vue-profil .tab td{display:block;width:auto;text-align:left}
+ #vue-profil .tab{table-layout:auto}
+ #vue-profil .tab tr{border-bottom:2px solid var(--bord);padding:8px 0}
+ #vue-profil .tab td{border:0;padding:3px 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+ #vue-profil .tab td[data-l]::before{content:attr(data-l);font-weight:700;color:var(--bordeaux);font-size:.76rem;min-width:6.5em}
+ #vue-profil .tab td:first-child{font-size:1rem;font-weight:700;display:block}
+ #vue-profil .plage{display:flex;flex-wrap:wrap;gap:4px}
+ #vue-profil .hm{width:4.2em;font-size:.9rem}
+}
+
+/* Impression : on imprime l'onglet courant, sans navigation ni boutons */
+@media print{
+ .onglets-large,.barre-outils,button{display:none!important}
+ body{background:#fff}
+ .carte{box-shadow:none;border:1px solid #999;break-inside:avoid}
+ .case-sem{break-inside:avoid}
 }

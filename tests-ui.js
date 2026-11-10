@@ -54,6 +54,15 @@ fr.addEventListener("load",async()=>{
   T(decl()===avantEff,"annulation : choix inchangés ("+decl()+")");
   trouve("Effacer mes choix simulés").click();trouve("Confirmer l'effacement").click();
   T(decl()===d0,"confirmation : choix simulés effacés, retour au scénario de base ("+decl()+" = "+d0+")");
+  d.querySelector('.onglets button[data-vue="reglages"]').click();await sleep(300);
+  const W=d.defaultView;let cap=null;const oldCO=W.URL.createObjectURL,oldCl=W.HTMLAnchorElement.prototype.click;
+  W.URL.createObjectURL=b=>{cap=b;return "blob:fictif"};W.HTMLAnchorElement.prototype.click=function(){};
+  [...d.querySelectorAll("#vue-reglages button")].find(b=>b.textContent.startsWith("Exporter l'état simulé")).click();
+  await sleep(60);W.URL.createObjectURL=oldCO;W.HTMLAnchorElement.prototype.click=oldCl;
+  T(!!cap,"export : un fichier JSON est produit localement, rien n'est envoyé");
+  const jx=JSON.parse(await cap.text());
+  T(jx.demonstration===true&&/fictif/.test(jx.avertissement),"export : état marqué fictif avec avertissement");
+  T(jx.choixSimules&&jx.recurrences!==undefined&&jx.tracesDeTest!==undefined,"export : seuls choix, récurrences et traces simulés");
   T(true,"fin du parcours");
  }catch(e){T(false,"exception "+e.message)}
  out.push(fails?fails+" ECHEC(S)":"PARCOURS OK");

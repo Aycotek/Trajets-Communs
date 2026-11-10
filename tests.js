@@ -155,4 +155,10 @@ for(const seed of [2026,1,2,3,4,5]){
 {const fs=require("fs");const src=[""+fs.readFileSync("app.js"),""+fs.readFileSync("engine.js"),""+fs.readFileSync("data.js")].join("\n");
  ok(!/innerHTML|outerHTML|insertAdjacentHTML|document\.write/.test(src),"aucune écriture HTML brute (innerHTML et équivalents absents)");
  ok(/e\.textContent=attrs\[k\]/.test(src),"le constructeur h() écrit le texte via textContent");}
+
+// Garde export/impression : périmètre fictif et feuille de style présents
+{const f2=require("fs");
+ok(f2.readFileSync("extra.css","utf8").includes("@media print"),"impression : feuille de style @media print présente");
+ok(f2.readFileSync("app.js","utf8").includes("Exporter l'état simulé (JSON)"),"export : bouton d'export de l'état simulé présent");
+ok(f2.readFileSync("app.js","utf8").includes("demonstration:true"),"export : l'état exporté est marqué fictif");}
 console.log(n+" vérifications au total");
