@@ -112,3 +112,16 @@ p,.doux,.sim,.note-limite,.src,li,summary,.case-sem,.leg,.puce-etat{overflow-wra
 .case-tete{flex-wrap:wrap}
 .case-tete>*{min-width:0}
 .puce-etat{white-space:normal;text-align:center}
+
+/* Profil : la grille horaire respire sur petit écran et zoom 200 % */
+@media (max-width:480px){
+ #vue-profil .tab th:nth-child(1),#vue-profil .tab td:first-child{width:17%}
+ #vue-profil .tab th:nth-child(2),#vue-profil .tab td:nth-child(2){width:11%}
+ #vue-profil .tab th:nth-child(3),#vue-profil .tab td:nth-child(3){width:35%}
+ #vue-profil .tab th:nth-child(4),#vue-profil .tab td:nth-child(4){width:35%}
+ #vue-profil .tab th,#vue-profil .tab td{padding:4px 1px}
+ #vue-profil .tab th{font-size:.62rem;letter-spacing:-.01em}
+ #vue-profil .tab td:first-child{font-size:.78rem}
+ #vue-profil .plage{display:flex;flex-wrap:wrap;gap:2px}
+ #vue-profil .hm{width:3.9em;font-size:.82rem}
+}

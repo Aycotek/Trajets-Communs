@@ -220,7 +220,8 @@ function vueProfil(){
  const el=$("#vue-profil");el.replaceChildren();
  const x=byId(S.profil);
  const sel=h("select",{"aria-label":"Profil",onchange:e=>{S.profil=e.target.value;vueProfil()}},S.pop.map(q=>h("option",{value:q.id,text:q.nom+" ("+q.role+")"})));sel.value=S.profil;
- const tbl=h("table",{class:"tab"},h("thead",null,h("tr",null,["Jour","Présent","Arrivée entre","Départ entre"].map(t=>h("th",{text:t})))));
+ const entete=t=>{const court={"Présent":"Prés.","Arrivée entre":"Arrivée","Départ entre":"Départ"}[t];return court?h("th",null,h("span",{"aria-hidden":"true",text:court}),h("span",{class:"sr-only",text:t})):h("th",{text:t})};
+ const tbl=h("table",{class:"tab"},h("thead",null,h("tr",null,["Jour","Présent","Arrivée entre","Départ entre"].map(entete))));
  const tb=h("tbody");
  const toT=m=>E.hm(m);
  const LABS={a0:"Arrivée entre, début",a1:"Arrivée entre, fin",d0:"Départ entre, début",d1:"Départ entre, fin"};
