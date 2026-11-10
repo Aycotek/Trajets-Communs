@@ -1,0 +1,29 @@
+/* Parcours d'arrivée (14:02) : étapes en grosses touches, carte toujours visible */
+.pc{max-width:760px;margin:0 auto}
+.pc-carte h2{font-size:1.35rem;margin:2px 0 6px;line-height:1.25}
+.pc-carte h2:focus{outline:none}
+.pc-prog{display:flex;gap:6px;margin-bottom:8px}
+.pc-prog i{flex:1;height:5px;border-radius:3px;background:rgba(107,29,44,.15)}
+.pc-prog i.on{background:var(--bordeaux)}
+.pc-grille{display:grid;gap:8px;margin:10px 0 4px}
+.pc-communes{grid-template-columns:repeat(2,minmax(0,1fr))}
+.pc-heures{grid-template-columns:repeat(4,minmax(0,1fr))}
+.pc-puce{min-height:48px;border-radius:14px;border:1px solid var(--bord);background:rgba(255,255,255,.8);color:var(--bordeaux-nuit);font-size:.95rem;font-weight:600;padding:0 8px;cursor:pointer;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.pc-puce.actif{background:linear-gradient(135deg,var(--bordeaux-2),var(--bordeaux));color:#fff;border-color:var(--bordeaux)}
+.pc-puce:focus-visible,.pc-etiq:focus-visible,.pc-lien-btn:focus-visible{outline:3px solid #1f3e60;outline-offset:2px}
+.pc-recap{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.pc-etiq{min-height:44px;border-radius:999px;border:1px solid var(--bord);background:rgba(255,255,255,.7);color:var(--bordeaux);padding:0 14px;font-size:.86rem;font-weight:600;cursor:pointer}
+.pc-reco{margin:8px 0 2px}
+.pc-reco-etiq{color:var(--ok)!important;font-weight:700}
+.pc-carte-zone{padding:10px}
+.pc-carte-zone .carte-zone{margin-top:6px}
+.pc-detail{margin-top:8px}
+.pc-lien-btn{min-height:44px;border:0;background:none;color:var(--bordeaux);font-weight:700;text-decoration:underline;cursor:pointer;padding:0 4px}
+.pc details.carte summary{cursor:pointer;font-weight:600;color:var(--bordeaux);min-height:44px;display:flex;align-items:center}
+@media (min-width:600px){.pc-communes{grid-template-columns:repeat(3,minmax(0,1fr))}.pc-heures{grid-template-columns:repeat(6,minmax(0,1fr))}}
+@media (max-width:360px){.pc-heures{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* Lisibilité mobile (14:3x) : carte à fenêtre fixe, numéros d'options */
+.pc .carte-svg{display:block;width:100%;height:auto;aspect-ratio:420/340;max-height:70vh}
+.pc-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--c,#6b1d2c);color:#fff;font-size:.78rem;font-weight:700;margin-right:6px;vertical-align:1px}
+.pc .horaire{min-width:150px}
+.horaire .pc-num{color:#fff;font-size:.78rem}
