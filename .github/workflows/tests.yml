@@ -11,7 +11,7 @@ jobs:
         run: |
           python3 -m http.server 8123 &
           sleep 1
-          google-chrome --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --blink-settings=prefersReducedMotion=1 --virtual-time-budget=40000 --dump-dom "http://127.0.0.1:8123/tests-ui.html" > dom.html 2>chrome.log
+          google-chrome --headless --no-sandbox --disable-gpu --disable-dev-shm-usage --blink-settings=prefersReducedMotion=1 --virtual-time-budget=50000 --dump-dom "http://127.0.0.1:8123/tests-ui.html" > dom.html 2>chrome.log
           ! grep -q "ECHEC" dom.html
           grep -q "PARCOURS OK" dom.html
           grep -q "CARTE OK" dom.html
@@ -19,3 +19,4 @@ jobs:
           grep -q "CLAVIER OK" dom.html
           grep -q "SAISIE OK" dom.html
           grep -q "LARGEUR OK" dom.html
+          grep -q "STOCKAGE OK" dom.html
