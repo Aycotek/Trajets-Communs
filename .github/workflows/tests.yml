@@ -15,4 +15,5 @@ jobs:
           ! grep -q "ECHEC" dom.html
           grep -q "PARCOURS OK" dom.html
           grep -q "CARTE OK" dom.html
-          grep -q "S OK" dom.html
+          grep -q "ALÉAS OK" dom.html
+          grep -q "CLAVIER OK" dom.html
