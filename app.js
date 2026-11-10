@@ -29,6 +29,8 @@ function vueDG0(){
  const L=S.bil.L,p=S.p,w=p.semaines;
  const present=S.pop.length;
  const rate=(a,b)=>b?Math.round(100*a/b)+" %":"-";
+ el.append(h("details",{class:"carte"},h("summary",{text:"Comprendre la démonstration en une minute"}),
+  h("p",{text:"1. « Ma semaine » montre les propositions : votre accord seul ne confirme rien, le trajet n'est confirmé que quand tous ont accepté (ici, les autres sont simulés). 2. « Trajets » détaille conducteur, arrêts, horaires et détour. 3. « Carte » dessine les trajets sur un vrai fond OpenStreetMap, avec une liste texte équivalente. 4. « Profil » change horaires et congés, tout est recalculé aussitôt. 5. « Contrôles » montre comment un trajet déclaré serait vérifié, sans prouver une présence. 6. « Réglages » donne chaque hypothèse et sa source. 7. « Réel » liste ce qui reste à construire pour un vrai service. Tout est fictif : aucun compte, aucun paiement, aucune donnée réelle."})));
  el.append(h("div",{class:"carte"},
   h("h2",{text:"Ce que la direction peut décider"}),
   h("p",{text:"Une semaine simulée pour "+present+" profils fictifs vers le site de Mont-Saint-Aignan. Chaque chiffre dit s'il est estimé, déclaré ou corroboré, et sur quelle hypothèse il repose."}),
@@ -164,6 +166,7 @@ function vueCarte(){
  svg.append(sv("rect",{x:0,y:0,width:W,height:H,fill:"#efe6d6"}));
  const tx0=ox/256,ty0=oy/256;
  for(let i=0;i<nx;i++)for(let j=0;j<ny;j++)svg.append(sv("image",{href:"https://tile.openstreetmap.org/"+z+"/"+(tx0+i)+"/"+(ty0+j)+".png",x:i*256,y:j*256,width:256,height:256,opacity:".92"}));
+ svg.addEventListener("error",()=>{const n=el.querySelector("#tuiles-ko");if(n)n.hidden=false},true);
  const R=window.TCROUTE,idx={};if(R)R.pts.forEach((q,i)=>{idx[q[0].toFixed(5)+","+q[1].toFixed(5)]=i});
  const kk=q=>q.lat.toFixed(5)+","+q.lng.toFixed(5);
  const ts=sel?[sel]:tsAll;
@@ -197,9 +200,11 @@ function vueCarte(){
   mk.addEventListener("pointermove",ev=>{if(!mk.dataset.drag)return;const m=svg.getScreenCTM().inverse(),pt=svg.createSVGPoint();pt.x=ev.clientX;pt.y=ev.clientY;const q=pt.matrixTransform(m);mk.setAttribute("cx",q.x);mk.setAttribute("cy",q.y);mk.dataset.x=q.x;mk.dataset.y=q.y});
   mk.addEventListener("pointerup",()=>{if(!mk.dataset.drag)return;delete mk.dataset.drag;if(mk.dataset.x){const px=+mk.dataset.x+ox,py=+mk.dataset.y+oy,n=256*Math.pow(2,z),lng=px/n*360-180,lat=Math.atan(Math.sinh(Math.PI*(1-2*py/n)))*180/Math.PI;S.moved.lat=lat;S.moved.lng=lng;vueCarte()}});}
  svg.append(sv("text",{x:W-4,y:H-5,"font-size":8*f*.85,"text-anchor":"end",fill:"#333",stroke:"#fff","stroke-width":f*.5,"paint-order":"stroke"},"© contributeurs OpenStreetMap"));
+ const ageJ=R&&R.date?Math.floor((Date.now()-new Date(R.date+"T00:00:00Z").getTime())/864e5):0;
  el.append(h("div",{class:"carte"},h("h2",{text:"Carte des trajets"}),bar,zb,svg,
+  h("p",{id:"tuiles-ko",class:"note-limite",hidden:"",text:"Le fond de carte OpenStreetMap n'a pas pu être chargé (réseau coupé ou serveur de tuiles bloquant) : les tracés et la liste texte ci-dessous restent utilisables. En production, ce point est couvert par un fournisseur de tuiles sous contrat ou un hébergement propre."}),
   h("div",{class:"leg"},h("span",null,h("i",{class:"d1"}),"rond : avec voiture"),h("span",null,h("i",{class:"d2 los"}),"losange : sans voiture"),h("span",{text:"carré bleu : gare · cercle blanc cerclé : prise en charge · pointillé : absent ce jour"})),
-  h("p",{class:"doux",text:"Fond : OpenStreetMap (© contributeurs, ODbL), chargé depuis tile.openstreetmap.org. Tracés : itinéraire routier du conducteur vers le site, précalculé le "+(R?R.date:"?")+" (OSRM, sans trafic). Trajets à plusieurs : conducteur, prises en charge puis site, tracés sur les routes quand les tronçons sont précalculés, sinon en pointillé : "+tracesReelles+" trajet(s) tracé(s) sur "+ts.length+"."}),
+  h("p",{class:"doux",text:"Fond : OpenStreetMap (© contributeurs, ODbL), chargé depuis tile.openstreetmap.org. Tracés : itinéraire routier du conducteur vers le site, précalculé le "+(R?R.date:"?")+" (OSRM, sans trafic)."+(ageJ>183?" Attention : tracés vieux de "+ageJ+" jours (plus de 6 mois) : à recalculer avant tout usage réel.":"")+" Trajets à plusieurs : conducteur, prises en charge puis site, tracés sur les routes quand les tronçons sont précalculés, sinon en pointillé : "+tracesReelles+" trajet(s) tracé(s) sur "+ts.length+"."}),
   simBandeau("Domiciles inventés (calés sur la route la plus proche pour le calcul). Données OpenStreetMap libres (ODbL), mais le serveur public de tuiles est limité à un usage léger : pour un déploiement, tuiles auto-hébergées ou fournisseur dont les conditions conviennent. Important : en affichant la carte, votre navigateur envoie votre adresse IP et la zone affichée au serveur de tuiles OpenStreetMap. Ce sont des données réelles du visiteur, même si tous les profils sont inventés. Les tracés viennent d'un précalcul ponctuel sur le serveur de démonstration OSRM (sans garantie, ne convient pas à un produit). Détail dans SOURCES.md.")));
  el.querySelector(".carte").append(panneauDeplace());
  const i1=el.querySelector(".leg i.d1"),i2=el.querySelector(".leg i.d2");i1.style.background="#6b1d2c";i2.style.background="#b9802f";

@@ -3,7 +3,7 @@ const fr=document.getElementById("app"),out=[];let fails=0;
 const T=(c,m)=>{out.push((c?"OK   ":"ECHEC ")+m);if(!c)fails++};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 fr.addEventListener("load",async()=>{
- await sleep(800);
+ await sleep(800);if(window.__r1)return;window.__r1=1;
  try{
   const d=fr.contentDocument;d.defaultView.sessionStorage.clear();
   d.querySelector('.onglets button[data-vue="semaine"]').click();
@@ -44,13 +44,14 @@ fr.addEventListener("load",async()=>{
    const sa=st(by(na));T(sa.startsWith("Confirmé"),"créneau A confirmé : "+sa);
    btn(by(nb),"Refuser").click();
    T(st(by(na))===sa,"se retirer du créneau B ne modifie pas le créneau A confirmé ("+st(by(na))+")");}
+  T(/Comprendre la démonstration en une minute/.test(d.querySelector("#vue-dg").innerText),"aide rapide présente sur l'onglet Décision");
   T(true,"fin du parcours");
  }catch(e){T(false,"exception "+e.message)}
  out.push(fails?fails+" ECHEC(S)":"PARCOURS OK");
  document.getElementById("res").textContent=out.join("\n");
 });
 /* Carte : zoom +/-, point déplacé "non calculé", liste texte */
-fr.addEventListener("load",async()=>{await sleep(2500);const out2=[];let f2=0;const U=(c,m)=>{out2.push((c?"OK   ":"ECHEC ")+m);if(!c)f2++};
+fr.addEventListener("load",async()=>{await sleep(2500);if(window.__r2)return;window.__r2=1;const out2=[];let f2=0;const U=(c,m)=>{out2.push((c?"OK   ":"ECHEC ")+m);if(!c)f2++};
  try{const d=fr.contentDocument;d.querySelector('.onglets button[data-vue="carte"]').click();const v=()=>d.querySelector("#vue-carte");
   U(!!v().querySelector("details ol.liste-carte"),"liste texte équivalente présente");
   U(v().querySelector("#z-plus")&&v().querySelector("#z-moins")&&v().querySelector("#z-reset"),"boutons Zoom +, Zoom −, Vue d'ensemble");
@@ -64,12 +65,15 @@ fr.addEventListener("load",async()=>{await sleep(2500);const out2=[];let f2=0;co
   const km0=v().textContent.match(/jusqu'au site : ([\d,]+) km/)[1];v().querySelector("#dep-n").click();
   const km1=v().textContent.match(/jusqu'au site : ([\d,]+) km/)[1];U(km0!==km1,"déplacer change seulement la distance à vol d'oiseau ("+km0+" -> "+km1+")");
   U(/ne changent pas/.test(v().textContent),"trajets et bilans inchangés, dit explicitement");
+  U(/précalculé le \d{4}-\d{2}-\d{2}/.test(v().textContent),"date du précalcul affichée");
+  v().querySelector("svg image").dispatchEvent(new d.defaultView.Event("error"));
+  U(v().querySelector("#tuiles-ko")&&!v().querySelector("#tuiles-ko").hidden,"tuile en échec : note visible, liste texte rappelée");
   v().querySelector("#pt-deplace").dispatchEvent(new KeyboardEvent("keydown",{key:"ArrowLeft",bubbles:true}));U(true,"déplacement clavier sans erreur");
  }catch(e){U(false,"exception carte "+e.message)}
  document.getElementById("res").textContent+="\n--- carte ---\n"+out2.join("\n")+"\n"+(f2?f2+" ECHEC(S) carte":"CARTE OK");
 });
 /* Aléas : départ ajouté tard, passager absent, retour non assuré */
-fr.addEventListener("load",async()=>{await sleep(4500);const o=[];let f3=0;const V=(c,m)=>{o.push((c?"OK   ":"ECHEC ")+m);if(!c)f3++};
+fr.addEventListener("load",async()=>{await sleep(4500);if(window.__r3)return;window.__r3=1;const o=[];let f3=0;const V=(c,m)=>{o.push((c?"OK   ":"ECHEC ")+m);if(!c)f3++};
  try{const d=fr.contentDocument;d.defaultView.sessionStorage.clear();d.querySelector('.onglets button[data-vue="semaine"]').click();
   const cases=()=>[...d.querySelectorAll("#vue-semaine .case-sem")],st=c=>c.querySelector(".puce-etat").textContent,nm=c=>c.querySelector("b").textContent;
   const btn=(c,t)=>[...c.querySelectorAll("button")].find(b=>b.textContent.startsWith(t)),by=n=>cases().find(c=>nm(c)===n);
@@ -90,7 +94,7 @@ fr.addEventListener("load",async()=>{await sleep(4500);const o=[];let f3=0;const
 });
 
 /* Clavier : flèches entre onglets */
-fr.addEventListener("load",async()=>{await sleep(6000);const o=[];let f4=0;const V=(c,m)=>{o.push((c?"OK   ":"ECHEC ")+m);if(!c)f4++};
+fr.addEventListener("load",async()=>{await sleep(6000);if(window.__r4)return;window.__r4=1;const o=[];let f4=0;const V=(c,m)=>{o.push((c?"OK   ":"ECHEC ")+m);if(!c)f4++};
  try{const d=fr.contentDocument,W=d.defaultView,tabs=[...d.querySelectorAll(".onglets button")];
   tabs[0].focus();tabs[0].dispatchEvent(new W.KeyboardEvent("keydown",{key:"ArrowRight",bubbles:true,cancelable:true}));
   V(d.querySelector(".onglets button.actif")===tabs[1],"flèche droite : onglet suivant actif");
@@ -102,7 +106,7 @@ fr.addEventListener("load",async()=>{await sleep(6000);const o=[];let f4=0;const
  document.getElementById("res").textContent+="\n--- clavier ---\n"+o.join("\n")+"\n"+(f4?f4+" ECHEC(S) clavier":"CLAVIER OK");});
 
 /* Saisie des heures : champ texte 24 heures, validation accessible */
-fr.addEventListener("load",async()=>{await sleep(7500);const o=[];let f5=0;const V=(c,m)=>{o.push((c?"OK   ":"ECHEC ")+m);if(!c)f5++};
+fr.addEventListener("load",async()=>{await sleep(7500);if(window.__r5)return;window.__r5=1;const o=[];let f5=0;const V=(c,m)=>{o.push((c?"OK   ":"ECHEC ")+m);if(!c)f5++};
  try{const d=fr.contentDocument;d.querySelector('.onglets button[data-vue="profil"]').click();await sleep(150);
   const champs=()=>[...d.querySelectorAll("#vue-profil input.hm")];
   V(champs().length===20,"20 champs horaires au format texte (5 jours x 4 bornes)");
@@ -121,12 +125,29 @@ fr.addEventListener("load",async()=>{await sleep(7500);const o=[];let f5=0;const
  document.getElementById("res").textContent+="\n--- saisie heures ---\n"+o.join("\n")+"\n"+(f5?f5+" ECHEC(S) saisie":"SAISIE OK");
 });
 /* Largeur : aucun débordement horizontal à 390 px sur chaque onglet */
-fr.addEventListener("load",async()=>{await sleep(9500);const o=[];let f6=0;const V=(c,m)=>{o.push((c?"OK   ":"ECHEC ")+m);if(!c)f6++};
+fr.addEventListener("load",async()=>{await sleep(9500);if(window.__r6)return;window.__r6=1;const o=[];let f6=0;const V=(c,m)=>{o.push((c?"OK   ":"ECHEC ")+m);if(!c)f6++};
  try{fr.style.width="390px";fr.style.height="1200px";const d=fr.contentDocument;await sleep(250);
   for(const vue of ["dg","semaine","trajets","carte","profil","controles","reglages","reel"]){
    d.querySelector('.onglets button[data-vue="'+vue+'"]').click();await sleep(200);
    const sw=d.documentElement.scrollWidth,iw=d.defaultView.innerWidth;
    V(sw<=iw,"onglet "+vue+" : pas de débordement horizontal à 390 px ("+sw+" <= "+iw+")");}
+  fr.style.width="320px";await sleep(250);
+  for(const vue of ["dg","semaine","trajets","carte","profil","controles","reglages","reel"]){
+   d.querySelector('.onglets button[data-vue="'+vue+'"]').click();await sleep(200);
+   const sw=d.documentElement.scrollWidth,iw=d.defaultView.innerWidth;
+   V(sw<=iw,"onglet "+vue+" : pas de débordement horizontal à 320 px ("+sw+" <= "+iw+")");}
  }catch(e){V(false,"exception largeur "+e.message)}
  document.getElementById("res").textContent+="\n--- largeur 390px ---\n"+o.join("\n")+"\n"+(f6?f6+" ECHEC(S) largeur":"LARGEUR OK");
+});
+
+/* Stockage : un état corrompu ne casse pas l'appli */
+fr.addEventListener("load",async()=>{await sleep(16000);if(window.__r7)return;window.__r7=1;const o=[];let f7=0;const V=(c,m)=>{o.push((c?"OK   ":"ECHEC ")+m);if(!c)f7++};
+ try{const d=fr.contentDocument,W=d.defaultView;
+  W.sessionStorage.setItem("tc_dec","<<corrompu>>");W.sessionStorage.setItem("tc_rec","{cassé");
+  W.location.reload();await sleep(2000);
+  const d2=fr.contentDocument;
+  V(!!d2.querySelector("#vue-dg h2"),"stockage corrompu : l'application redémarre sur un état vide");
+  V(!/corrompu|NaN|undefined/.test(d2.querySelector("#vue-dg").innerText),"aucune valeur corrompue affichée");
+ }catch(e){V(false,"exception stockage "+e.message)}
+ document.getElementById("res").textContent+="\n--- stockage ---\n"+o.join("\n")+"\n"+(f7?f7+" ECHEC(S) stockage":"STOCKAGE OK");
 });
