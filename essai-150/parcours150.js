@@ -134,7 +134,7 @@ function carte(opts){
 const OSRM="https://router.project-osrm.org";
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 let derniere=0;
-async function osrm(path){const d=Date.now()-derniere;if(d<1100)await sleep(1100-d);derniere=Date.now();const r=await fetch(OSRM+path);if(!r.ok)throw new Error("OSRM "+r.status);const j=await r.json();if(j.code!=="Ok")throw new Error("OSRM "+j.code);return j}
+async function osrm(path){/* Jusqu'à 2 nouveaux essais (après 2 s puis 4 s) pour 502, 503, 504 ou réseau injoignable ; toujours 1 requête/1,1 s au plus. 429 (limitation) : aucun nouvel essai automatique, erreur affichée avec le délai Retry-After si le service le donne. Au-delà : erreur, pas d'estimation. */for(let essai=0;;essai++){const d=Date.now()-derniere;if(d<1100)await sleep(1100-d);derniere=Date.now();let r=null;try{r=await fetch(OSRM+path)}catch(e){if(essai>=2)throw new Error("service routier injoignable");await sleep(2000*(essai+1));continue}if(!r.ok){if([502,503,504].includes(r.status)&&essai<2){await sleep(2000*(essai+1));continue}if(r.status===429){const ra=r.headers&&r.headers.get&&r.headers.get("Retry-After");let ms=0;if(ra){const v=ra.trim();ms=/^\d+$/.test(v)?parseInt(v,10)*1000:Date.parse(v)-Date.now();if(!(ms>0))ms=0}const er=new Error("service routier saturé (429), réessayez plus tard"+(ms?" : attendre au moins "+Math.ceil(ms/1000)+" s":""));er.attenteMs=ms;throw er}throw new Error("OSRM "+r.status)}const j=await r.json();if(j.code!=="Ok")throw new Error("OSRM "+j.code);return j}}
 const enCours=new Set(),echecs=new Set(),file=[];let actif=false;
 function oublieDomicile(){const base=R&&R.nBase;if(!base)return;for(const k of Object.keys(L)){const [i,j]=k.split(">").map(Number);if(i>=base||j>=base)delete L[k]}enCours.clear();echecs.clear();file.length=0;for(const k of Object.keys(idx))if(idx[k]>=base)delete idx[k];R.pts.length=base;R.km.length=base;R.min.length=base;for(let i=0;i<base;i++){R.km[i].length=base;R.min[i].length=base}}
 async function ajouteDomicile(a){
@@ -155,10 +155,10 @@ async function ajouteDomicile(a){
  idx[a.lat.toFixed(5)+","+a.lng.toFixed(5)]=n;
 }
 async function lance(){
- st.erreur=null;
+ st.erreur=null;st.reessai=false;st.attente=0;
  if(!st.adr){calcule();rend();return}
  st.calc=true;rend();
- try{await (st.matP||ajouteDomicile(st.adr));st.calc=false;calcule()}catch(e){st.calc=false;st.erreur="Les durées routières depuis cette adresse n'ont pas pu être calculées ("+(e&&e.message||"erreur")+"). Aucune proposition n'est affichée plutôt qu'une estimation approximative."}
+ try{await (st.matP||ajouteDomicile(st.adr));st.calc=false;calcule()}catch(e){st.calc=false;st.reessai=true;st.attente=e&&e.attenteMs?Date.now()+e.attenteMs:0;st.erreur="Les durées routières depuis cette adresse n'ont pas pu être calculées ("+(e&&e.message||"erreur")+"). Aucune proposition n'est affichée plutôt qu'une estimation approximative."}
  rend();
 }
 function enfile(key){if(L[key]||enCours.has(key)||echecs.has(key))return;const [i,j]=key.split(">").map(Number);enCours.add(key);file.push([key,i,j]);if(!actif)boucle()}
@@ -169,16 +169,22 @@ function adresseUI(){
  const liste=h("div",{class:"pc-sugg",role:"group","aria-label":"Adresses suggérées"}),msg=h("p",{class:"doux",role:"status"});
  let tm,seq=0;
  inp.addEventListener("input",()=>{clearTimeout(tm);const q=inp.value.trim();liste.replaceChildren();msg.textContent="";if(q.length<5)return;
-  tm=setTimeout(async()=>{const my=++seq;try{const r=await fetch("https://data.geopf.fr/geocodage/completion/?type=StreetAddress&maximumResponses=8&text="+encodeURIComponent(q));const j=await r.json();if(my!==seq)return;
+  tm=setTimeout(async()=>{const my=++seq;try{const r=await fetch("https://data.geopf.fr/geocodage/completion/?type=StreetAddress&maximumResponses=8&text="+encodeURIComponent(q));if(!r.ok)throw new Error("IGN "+r.status);const j=await r.json();if(my!==seq)return;
    const ok=(j.results||[]).filter(x=>x.kind==="housenumber");
    liste.replaceChildren(...ok.slice(0,6).map(x=>h("button",{type:"button",class:"pc-puce pc-sug",onclick:()=>{st.adr={lat:x.y,lng:x.x,label:x.fulltext};st.commune=null;st.etape=2;st.matP=ajouteDomicile(st.adr);st.matP.catch(()=>{});rend()},text:x.fulltext})));
    if(!ok.length)msg.textContent=(j.results||[]).length?"Ajoutez le numéro de la rue pour un point exact.":"Aucune adresse trouvée."}catch(e){msg.textContent="La recherche d'adresse est indisponible pour le moment."}},350)});
  w.append(inp,liste,msg,h("p",{class:"note-limite",text:"Confidentialité : ce que vous tapez est envoyé au service d'adresses de l'IGN, puis les coordonnées de l'adresse choisie au serveur d'itinéraires public OSRM. Cette page ne l'enregistre pas ; ces services peuvent garder leurs propres journaux."}));
  return w;
 }
+function boutonReessai(){
+ const b=h("button",{type:"button",class:"actif",text:"Réessayer avec la même adresse"});
+ const maj=()=>{const reste=Math.ceil(((st.attente||0)-Date.now())/1000);if(reste>0){b.disabled=true;b.textContent="Réessayer dans "+reste+" s";return true}b.disabled=false;b.textContent="Réessayer avec la même adresse";return false};
+ b.addEventListener("click",()=>{if(maj())return;st.matP=ajouteDomicile(st.adr);st.matP.catch(()=>{});lance()});
+ if(maj()){const t=setInterval(()=>{if(!b.isConnected||!maj())clearInterval(t)},1000)}
+ return b}
 function attente(){
  if(st.calc)return h("div",{class:"carte pc-carte"},h("h2",{text:"Calcul des durées routières…"}),h("p",{class:"doux",role:"status",text:"Itinéraires depuis votre adresse vers les 28 profils fictifs et le site. Quelques secondes : le service public limite le rythme des demandes."}));
- return h("div",{class:"carte pc-carte"},h("h2",{text:"Pas de proposition"}),h("p",{role:"alert",text:st.erreur}),h("div",{class:"barre-outils"},h("button",{type:"button",class:"actif",onclick:()=>{st.erreur=null;st.etape=1;rend()},text:"Changer d'adresse"})));
+ return h("div",{class:"carte pc-carte"},h("h2",{text:"Calcul indisponible"}),h("p",{role:"alert",text:st.erreur}),h("p",{class:"doux",text:"Ce n'est pas un résultat : la recherche de propositions n'a pas pu avoir lieu, donc on ne sait pas s'il existe des personnes compatibles."}),h("div",{class:"barre-outils"},...(st.reessai&&st.adr?[boutonReessai()]:[]),h("button",{type:"button",onclick:()=>{st.erreur=null;st.etape=1;rend()},text:"Changer d'adresse"})));
 }
 
 /* ---------- Interface ---------- */
