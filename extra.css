@@ -130,6 +130,7 @@ p,.doux,.sim,.note-limite,.src,li,summary,.case-sem,.leg,.puce-etat{overflow-wra
 @media print{
  .onglets-large,.barre-outils,button{display:none!important}
  body{background:#fff}
- .carte{box-shadow:none;border:1px solid #999;break-inside:avoid}
- .case-sem{break-inside:avoid}
+ .carte{box-shadow:none;border:1px solid #999}
+ .case-sem,.grille>*,.etage{break-inside:avoid}
+ h2,h3{break-after:avoid}
 }
