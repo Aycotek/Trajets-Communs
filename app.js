@@ -387,7 +387,7 @@ function vueReel(){
   ["Connexion avec le compte professionnel (Teams)","non","Simulée par un sélecteur de profils. Réel : application Teams enregistrée dans Microsoft Entra ID, connexion unique, accord de l'administrateur du tenant et de la DSI."],
   ["Notifications Teams","non","Absentes. Réel : notifications du fil d'activité via Microsoft Graph, avec permission d'envoi consentie ou validée par l'administrateur."],
   ["Comptes persistants et domiciles","non","Rien n'est stocké : cette page est statique. Réel : serveur, base chiffrée, droits par rôle, journal d'audit, suppression des données."],
-  ["Temps de route et trafic en direct","non","Distances et durées précalculées (OSRM sur OpenStreetMap, sans trafic) pour les points fictifs. Réel : moteur de routage et fond de carte sous contrat, avec quotas et licences à vérifier."],
+  ["Temps de route et trafic en direct","non","Distances et durées précalculées (OSRM sur OpenStreetMap, sans trafic) pour les points fictifs. Réel : moteur de routage et fond de carte sous contrat, avec quotas et licences à vérifier. Options comparées, conditions citées et recommandation préparatoire dans ROUTAGE-TUILES.md."],
   ["Traces de déplacement réelles","non","Jeux de test uniquement. Réel : application mobile, information et base légale, droits des personnes."],
   ["Analyse d'impact (AIPD) et DPO","à faire","À décider avec le DPO de l'entreprise : la CNIL liste les traitements de localisation à large échelle parmi ceux qui peuvent en exiger une."],
   ["Hébergement sécurisé et tests d'intrusion","non","Pas de serveur ici. Réel : hébergement choisi par l'entreprise, revue de code, test d'intrusion."],
