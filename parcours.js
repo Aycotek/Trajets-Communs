@@ -3,7 +3,7 @@
    (pour utiliser les durées routières précalculées). Utilise le moteur existant (engine.js) sans le modifier. */
 (function(){
 "use strict";
-const D=window.TCDATA,E=window.TCENGINE,R=window.TCROUTE,L=window.TCLEGS||{};
+const D=window.TCDATA,E=window.TCENGINE,R=window.TCROUTE,L=Object.assign({},window.TCLEGS||{},window.TCLEGS2||{});
 const root=document.getElementById("vue-parcours");
 if(!root||!D||!E)return;
 const p=E.defaults(),pop=E.population(28,2026);
@@ -73,51 +73,65 @@ const nomCourt=y=>y.nom.replace("Profil ","");
 const col=["#6b1d2c","#2d5a8a","#2f6b3f","#8a2a8a"];
 
 /* ---------- Carte ---------- */
+/* Fenêtre fixe (420 x 340) : la carte garde la même hauteur quelle que soit la distance. Les tracés suivent les routes (tronçons OSRM précalculés,
+   route-legs.js + route-legs2.js) ; sans tronçon précalculé, trait pointillé indicatif. */
+function trace(t){
+ const seq=t.ev.pts.map(q=>idx[kk(q)]);const legs=[];for(let q=0;q<seq.length-1;q++)legs.push(seq[q]!==undefined&&seq[q]===seq[q+1]?[]:L[seq[q]+">"+seq[q+1]]);
+ const complet=legs.length>0&&legs.every(Boolean);
+ const geo=complet?[].concat(...legs).map(q=>({lat:q[1],lng:q[0]})):t.ev.pts;
+ return {geo,complet};
+}
+function pointA(geo,fr){ /* point situé à la fraction fr de la longueur du tracé */
+ if(geo.length<2)return geo[0];let tot=0;const d=[];for(let i=1;i<geo.length;i++){const l=E.hav(geo[i-1],geo[i]);d.push(l);tot+=l}
+ let x=tot*fr;for(let i=0;i<d.length;i++){if(x<=d[i]||i===d.length-1){const u=d[i]?Math.min(1,x/d[i]):0;return {lat:geo[i].lat+(geo[i+1].lat-geo[i].lat)*u,lng:geo[i].lng+(geo[i+1].lng-geo[i].lng)*u}}x-=d[i]}
+ return geo[geo.length-1];
+}
 function carte(opts){
+ const VW=420,VH=340,PAD=34;
  const trips=opts.options.map(o=>o.t),sel=opts.sel;
- const pts=trips.length?trips.flatMap(t=>t.ev.pts):[...pop.map(x=>x.home)];
+ const tr=opts.options.map(o=>trace(o.t));
+ const pts=trips.length?tr.flatMap(x=>x.geo):[...pop.map(x=>x.home)];
  const all=[D.SITE,...pts];if(st.vous)all.push(st.vous.home);
- const la=all.map(q=>q.lat),lo=all.map(q=>q.lng);
- const box={a:Math.min(...la)-.006,b:Math.max(...la)+.006,c:Math.min(...lo)-.01,d:Math.max(...lo)+.01};
- let z=14,tl,br,nx,ny;
- for(;z>=9;z--){tl=mer(box.b,box.c,z);br=mer(box.a,box.d,z);nx=Math.floor(br.x/256)-Math.floor(tl.x/256)+1;ny=Math.floor(br.y/256)-Math.floor(tl.y/256)+1;if(nx*ny<=16)break}
- const ox=Math.floor(tl.x/256)*256,oy=Math.floor(tl.y/256)*256,W=nx*256,H=ny*256;
+ let z=15,mn,mx;
+ for(;z>=8;z--){const m=all.map(q=>mer(q.lat,q.lng,z));mn={x:Math.min(...m.map(a=>a.x)),y:Math.min(...m.map(a=>a.y))};mx={x:Math.max(...m.map(a=>a.x)),y:Math.max(...m.map(a=>a.y))};if(mx.x-mn.x<=VW-2*PAD&&mx.y-mn.y<=VH-2*PAD)break}
+ const cx=(mn.x+mx.x)/2,cy=(mn.y+mx.y)/2,ox=cx-VW/2,oy=cy-VH/2;
  const P=q=>{const m=mer(q.lat,q.lng,z);return {x:m.x-ox,y:m.y-oy}};
- const f=W/420;
- const svg=sv("svg",{class:"carte-svg",viewBox:"0 0 "+W+" "+H,role:"img","aria-label":trips.length?"Carte Plan IGN : votre point de départ, le site d'arrivée et les trajets proposés avec leur heure de départ":"Carte Plan IGN : le site d'arrivée et les domiciles fictifs"});
- svg.append(sv("rect",{x:0,y:0,width:W,height:H,fill:"#efe6d6"}));
- for(let i=0;i<nx;i++)for(let j=0;j<ny;j++)svg.append(sv("image",{href:"https://data.geopf.fr/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM_0_19&TILEMATRIX="+z+"&TILEROW="+(oy/256+j)+"&TILECOL="+(ox/256+i),x:i*256,y:j*256,width:256,height:256,opacity:".92"}));
- let ok=0;
+ const svg=sv("svg",{class:"carte-svg pc-svg",viewBox:"0 0 "+VW+" "+VH,role:"img","aria-label":trips.length?"Carte Plan IGN : votre point de départ, le site d'arrivée et les trajets proposés par la route, numérotés comme les cartes horaires":"Carte Plan IGN : le site d'arrivée et les domiciles fictifs"});
+ svg.append(sv("rect",{x:0,y:0,width:VW,height:VH,fill:"#efe6d6"}));
+ const tx0=Math.floor(ox/256),tx1=Math.floor((ox+VW)/256),ty0=Math.floor(oy/256),ty1=Math.floor((oy+VH)/256);
+ for(let i=tx0;i<=tx1;i++)for(let j=ty0;j<=ty1;j++)svg.append(sv("image",{href:"https://data.geopf.fr/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM_0_19&TILEMATRIX="+z+"&TILEROW="+j+"&TILECOL="+i,x:i*256-ox,y:j*256-oy,width:256,height:256,opacity:".9"}));
  svg.addEventListener("error",e=>{if(e.target&&e.target.tagName==="image"){const n=root.querySelector("#pc-tuiles");if(n)n.hidden=false}},true);
- svg.addEventListener("load",e=>{if(e.target&&e.target.tagName==="image")ok++},true);
- if(!trips.length)pop.forEach(x=>{const a=P(x.home);svg.append(sv("circle",{cx:a.x,cy:a.y,r:4*f*.85,fill:x.aVoiture?"#6b1d2c":"#b9802f","fill-opacity":".55",stroke:"#3e0f19","stroke-width":f*.3}))});
+ if(!trips.length)pop.forEach(x=>{const a=P(x.home);svg.append(sv("circle",{cx:a.x,cy:a.y,r:4,fill:x.aVoiture?"#6b1d2c":"#b9802f","fill-opacity":".6",stroke:"#3e0f19","stroke-width":1}))});
  const ordre=opts.options.map((o,i)=>i).filter(i=>opts.options[i].t!==sel);if(sel)ordre.push(opts.options.findIndex(o=>o.t===sel));
- const badges=[];
- ordre.forEach(i=>{const o=opts.options[i],t=o.t,c=col[i%col.length],faint=t!==sel;
-  const seq=t.ev.pts.map(q=>idx[kk(q)]);const legs=[];for(let q=0;q<seq.length-1;q++)legs.push(L[seq[q]+">"+seq[q+1]]);
-  const complet=legs.length>0&&legs.every(Boolean);
-  const geo=complet?[].concat(...legs).map(q=>({lat:q[1],lng:q[0]})):t.ev.pts;
+ const nums=[];
+ ordre.forEach(i=>{const o=opts.options[i],t=o.t,c=col[i%col.length],faint=t!==sel,{geo,complet}=tr[i];
   const path=geo.map(q=>{const a=P(q);return a.x.toFixed(1)+","+a.y.toFixed(1)}).join(" ");
-  svg.append(sv("polyline",{points:path,fill:"none",stroke:"#fff","stroke-width":3*f*(faint?.8:1),"stroke-linejoin":"round","stroke-opacity":faint?".45":".95"}));
-  const tr=sv("polyline",{points:path,fill:"none",stroke:c,"stroke-width":1.7*f*(faint?.8:1),"stroke-linejoin":"round","stroke-dasharray":complet?"":"8 5","stroke-opacity":faint?".5":"1",class:"trace"});
-  tr.addEventListener("click",()=>{st.sel=i;rend()});svg.append(tr);
-  t.pax.forEach(x=>{if(faint)return;const a=P(x.home);svg.append(sv("circle",{cx:a.x,cy:a.y,r:6*f*.85,fill:"#fff",stroke:c,"stroke-width":2.6*f*.85}))});
-  badges.push([o,i,c,faint]);
+  svg.append(sv("polyline",{points:path,fill:"none",stroke:"#fff","stroke-width":faint?5:9,"stroke-linejoin":"round","stroke-linecap":"round","stroke-opacity":faint?".6":".95"}));
+  const l=sv("polyline",{points:path,fill:"none",stroke:c,"stroke-width":faint?2.4:5,"stroke-linejoin":"round","stroke-linecap":"round","stroke-dasharray":complet?"":"9 6","stroke-opacity":faint?".75":"1",class:"trace"});
+  l.addEventListener("click",()=>{st.sel=i;rend(true)});svg.append(l);
+  t.pax.forEach(x=>{if(faint)return;const a=P(x.home);svg.append(sv("circle",{cx:a.x,cy:a.y,r:6,fill:"#fff",stroke:c,"stroke-width":3}))});
+  nums.push([i,c,faint,pointA(geo,.28+.16*i)]);
  });
- const s0=P(D.SITE),r0=9*f*.85;
- svg.append(sv("polygon",{points:[[s0.x,s0.y-r0*1.6],[s0.x+r0*1.4,s0.y+r0],[s0.x-r0*1.4,s0.y+r0]].map(q=>q.join(",")).join(" "),fill:"#3e0f19",stroke:"#fff","stroke-width":f*.4}));
- svg.append(sv("text",{x:s0.x+r0*1.8,y:s0.y-r0*.5,"font-size":13*f*.85,"font-weight":"700",fill:"#3e0f19",stroke:"#fff","stroke-width":f,"paint-order":"stroke"},"Site d'arrivée"));
- const posees=[];
- badges.forEach(([o,i,c,faint])=>{const t=o.t,dir=t.dir,anchor=dir==="matin"?st.vous.home:D.SITE,a=P(anchor),txt=hm(dir==="matin"?monHoraire(t).quand:t.ev.depart),fs=12.5*f*.85,w=fs*3.1,hh=fs*1.8;
-  const sg=dir==="matin"?-1:1;let y0=dir==="matin"?a.y-6*f*.85-hh-fs*.25:a.y+8*f*.85;for(let k=0;k<8&&posees.some(q=>Math.abs(q[0]-a.x)<w&&Math.abs(q[1]-y0)<hh*.95);k++)y0+=sg*hh*1.05;posees.push([a.x,y0]);
-  const g=sv("g",{class:"trace badge-heure",opacity:faint?".75":"1"});
-  g.append(sv("rect",{x:a.x-w/2,y:y0,width:w,height:hh,rx:hh/2,fill:c,stroke:"#fff","stroke-width":f*.6}),sv("text",{x:a.x,y:y0+hh*.7,"text-anchor":"middle","font-size":fs,"font-weight":"700",fill:"#fff"},txt),sv("title",null,(dir==="matin"?"Votre départ ":"Départ du site ")+txt+" : voir ce trajet"));
-  g.addEventListener("click",()=>{st.sel=i;rend()});svg.append(g)});
- if(st.vous){const a=P(st.vous.home),r=8*f*.85;
-  svg.append(sv("circle",{cx:a.x,cy:a.y,r:r*1.6,fill:"#e3b765","fill-opacity":".35",stroke:"#8f5f16","stroke-width":f*.5}));
-  svg.append(sv("circle",{cx:a.x,cy:a.y,r:r*.8,fill:"#e3b765",stroke:"#3e0f19","stroke-width":f*.6}));
-  svg.append(sv("text",{x:a.x+r*1.9,y:a.y+4*f*.85,"font-size":13*f*.85,"font-weight":"700",fill:"#3e0f19",stroke:"#fff","stroke-width":f,"paint-order":"stroke"},"Vous"))}
- svg.append(sv("text",{x:W-4,y:H-5,"font-size":8*f*.85,"text-anchor":"end",fill:"#333",stroke:"#fff","stroke-width":f*.5,"paint-order":"stroke"},"© IGN · Plan IGN · Licence Ouverte"));
+ /* repères : site, vous */
+ const s0=P(D.SITE),va=st.vous?P(st.vous.home):null,mat=st.dir==="matin",so=sel?opts.options.find(o=>o.t===sel):null;
+ const poses=[];
+ function pastille(a,txt,fill,dy){const fs=13,w=txt.length*7.9+18,hh=22;const x=Math.max(3,Math.min(VW-w-3,a.x-w/2));
+  const ok=y=>y>=3&&y<=VH-hh-3&&!poses.some(q=>x<q[0]+q[2]+4&&q[0]<x+w+4&&y<q[1]+hh+4&&q[1]<y+hh+4);
+  let y=a.y+dy;if(!ok(y)){const alt=[a.y-hh-16,a.y+16,a.y-hh-42,a.y+42].find(ok);if(alt!==undefined)y=alt}
+  y=Math.max(3,Math.min(VH-hh-3,y));poses.push([x,y,w]);
+  const g=sv("g",{class:"pc-pastille"});g.append(sv("rect",{x,y,width:w,height:hh,rx:11,fill,stroke:"#fff","stroke-width":2}),sv("text",{x:x+w/2,y:y+hh*.7,"text-anchor":"middle","font-size":fs,"font-weight":"700",fill:"#fff"},txt));return g}
+ /* numéros des options, au-dessus des tracés */
+ nums.forEach(([i,c,faint,a])=>{const g=sv("g",{class:"trace",opacity:faint?".92":"1"});const p=P(a);
+  g.append(sv("circle",{cx:p.x,cy:p.y,r:faint?10:12,fill:c,stroke:"#fff","stroke-width":2.5}),sv("text",{x:p.x,y:p.y+(faint?4:4.8),"text-anchor":"middle","font-size":faint?12:14,"font-weight":"700",fill:"#fff"},String(i+1)),sv("title",null,"Option "+(i+1)+" : voir ce trajet"));
+  g.addEventListener("click",()=>{st.sel=i;rend(true)});svg.append(g)});
+ svg.append(sv("polygon",{points:[[s0.x,s0.y-13],[s0.x+11,s0.y+7],[s0.x-11,s0.y+7]].map(q=>q.join(",")).join(" "),fill:"#3e0f19",stroke:"#fff","stroke-width":2.5}));
+ if(st.vous){svg.append(sv("circle",{cx:va.x,cy:va.y,r:13,fill:"#e3b765","fill-opacity":".4",stroke:"#8f5f16","stroke-width":1.5}),sv("circle",{cx:va.x,cy:va.y,r:7,fill:"#e3b765",stroke:"#3e0f19","stroke-width":2.5}))}
+ const proche=va&&Math.hypot(s0.x-va.x,s0.y-va.y)<70,dS=proche?-40:(s0.y>VH/2?-40:18),dV=proche?16:(va&&va.y>s0.y?16:-38);
+ if(so&&st.vous){const mh=monHoraire(so.t);
+  svg.append(pastille(s0,mat?"Arrivée "+hm(so.t.ev.arrive):"Départ du travail "+hm(so.t.ev.depart),"#3e0f19",dS));
+  svg.append(pastille(va,mat?"Vous : départ "+hm(mh.quand):"Chez vous ~"+hm(mh.conduit?so.t.ev.arrive:mh.quand),"#8f5f16",dV));
+ }else{svg.append(pastille(s0,"Site d'arrivée","#3e0f19",dS));if(st.vous)svg.append(pastille(va,"Vous","#8f5f16",dV))}
+ svg.append(sv("text",{x:VW-4,y:VH-4,"font-size":9,"text-anchor":"end",fill:"#333",stroke:"#fff","stroke-width":2.5,"paint-order":"stroke"},"© IGN · Plan IGN · Licence Ouverte"));
  return svg;
 }
 
@@ -170,7 +184,7 @@ function railOptions(){
  const rail=h("div",{class:"rail-trajets",role:"group","aria-label":"Trajets proposés pour ce jour, avec les horaires"});
  st.options.forEach((o,i)=>{const t=o.t,mh=monHoraire(t),on=i===st.sel;
   const b=h("button",{type:"button",class:"horaire"+(on?" actif":""),"aria-pressed":String(on),onclick:()=>{st.sel=i;rend(true)}},
-   h("b",{text:(st.dir==="matin"?"Départ ":"Départ du site ")+hm(st.dir==="matin"?mh.quand:t.ev.depart)}),h("span",{text:(st.dir==="matin"?"arrivée "+hm(t.ev.arrive):"chez vous ~"+hm(mh.conduit?t.ev.arrive:mh.quand))+" · "+nomCourt(o.m.y)}),h("span",{text:mh.conduit?"vous conduisez":"vous êtes passager"}),o.reco?h("span",{class:"pc-reco-etiq",text:"Recommandé"}):null);
+   h("b",null,h("span",{class:"pc-num","aria-hidden":"true",text:String(i+1)}),(st.dir==="matin"?"Départ ":"Départ du site ")+hm(st.dir==="matin"?mh.quand:t.ev.depart)),h("span",{text:(st.dir==="matin"?"arrivée "+hm(t.ev.arrive):"chez vous ~"+hm(mh.conduit?t.ev.arrive:mh.quand))+" · "+nomCourt(o.m.y)}),h("span",{text:mh.conduit?"vous conduisez":"vous êtes passager"}),o.reco?h("span",{class:"pc-reco-etiq",text:"Recommandé"}):null);
   b.style.setProperty("--c",col[i%col.length]);rail.append(b)});
  return rail;
 }
@@ -213,14 +227,14 @@ function rend(garderPos){
   wrap.append(resultat());
   if(st.best){
    const cz=h("div",{class:"carte pc-carte-zone"});
-   cz.append(railOptions(),h("div",{class:"carte-zone"},carte({options:st.options,sel:st.options[st.sel]?st.options[st.sel].t:null})),jours(),detail());
+   cz.append(jours(),h("div",{class:"carte-zone"},carte({options:st.options,sel:st.options[st.sel]?st.options[st.sel].t:null})),railOptions(),detail());
    wrap.append(cz);
    const liste=h("ol",{class:"liste-carte"},st.options.map(o=>{const mh=monHoraire(o.t);return h("li",null,h("b",{text:o.m.y.nom}),(" : "+(st.dir==="matin"?"votre départ "+hm(mh.quand)+", arrivée "+hm(o.t.ev.arrive):"départ du travail "+hm(o.t.ev.depart)+", chez vous vers "+hm(mh.conduit?o.t.ev.arrive:mh.quand))+", "+(mh.conduit?"vous conduisez":"vous êtes passager")+".")) }));
    wrap.append(h("details",{class:"carte"},h("summary",{text:"Version texte de la carte ("+st.options.length+" trajet(s) "+JN[st.jour]+")"}),st.options.length?liste:h("p",{class:"doux",text:"Aucun trajet ce jour et ce sens."})));
   }else wrap.append(h("div",{class:"carte pc-carte-zone"},h("div",{class:"carte-zone"},carte({options:[],sel:null}))));
  }
  wrap.append(h("p",{id:"pc-tuiles",class:"note-limite",hidden:"",text:"Le fond de carte Plan IGN n'a pas pu être chargé, ou seulement en partie. Les trajets et la version texte restent utilisables."}));
- wrap.append(h("div",{class:"sim",role:"note"},"Démonstration : 28 profils inventés, aucun compte, aucun vrai collègue, rien n'est envoyé ni réservé. "+(st.vous?"Vous êtes supposé flexible (conducteur ou passager selon le trajet) ; "+st.nbPartenaires+" profils sur "+pop.length+" ont au moins un trajet compatible avec vos horaires. Votre point de départ est un domicile fictif de "+st.commune+(st.exact?"":" (le plus proche, cette commune n'en compte pas dans le jeu)")+", pour utiliser les durées routières précalculées. Les pastilles donnent votre heure de départ (matin) ou de départ du travail (soir). Trajets en pointillé : tracé indicatif, tronçon routier non précalculé. ":"")+"Fond Plan IGN : votre navigateur envoie votre adresse IP et la zone affichée au serveur de tuiles IGN."));
+ wrap.append(h("div",{class:"sim",role:"note"},"Démonstration : 28 profils inventés, aucun compte, aucun vrai collègue, rien n'est envoyé ni réservé. "+(st.vous?"Vous êtes supposé flexible (conducteur ou passager selon le trajet) ; "+st.nbPartenaires+" profils sur "+pop.length+" ont au moins un trajet compatible avec vos horaires. Votre point de départ est un domicile fictif de "+st.commune+(st.exact?"":" (le plus proche, cette commune n'en compte pas dans le jeu)")+", pour utiliser les durées routières précalculées. La carte indique votre heure de départ (matin) ou de départ du travail (soir) ; les numéros renvoient aux cartes horaires. Les tracés suivent les routes (calcul OSRM précalculé, sans trafic : les durées sont des estimations hors circulation). Pointillé : tracé indicatif quand un tronçon n'est pas disponible. ":"")+"Fond Plan IGN : votre navigateur envoie votre adresse IP et la zone affichée au serveur de tuiles IGN."));
  wrap.append(h("p",{class:"doux pc-lien"},"Voir tous les trajets de la démonstration dans l'onglet ",h("button",{type:"button",class:"pc-lien-btn",onclick:()=>{const b=document.querySelector('.onglets button[data-vue="carte"]');if(b)b.click()},text:"Carte"}),"."));
  root.append(wrap);
  if(garderPos){window.scrollTo(0,y0)}

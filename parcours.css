@@ -22,3 +22,8 @@
 .pc details.carte summary{cursor:pointer;font-weight:600;color:var(--bordeaux);min-height:44px;display:flex;align-items:center}
 @media (min-width:600px){.pc-communes{grid-template-columns:repeat(3,minmax(0,1fr))}.pc-heures{grid-template-columns:repeat(6,minmax(0,1fr))}}
 @media (max-width:360px){.pc-heures{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* Lisibilité mobile (14:3x) : carte à fenêtre fixe, numéros d'options */
+.pc .carte-svg{display:block;width:100%;height:auto;aspect-ratio:420/340;max-height:70vh}
+.pc-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--c,#6b1d2c);color:#fff;font-size:.78rem;font-weight:700;margin-right:6px;vertical-align:1px}
+.pc .horaire{min-width:150px}
+.horaire .pc-num{color:#fff;font-size:.78rem}
