@@ -125,6 +125,21 @@ fr.addEventListener("load",async()=>{await sleep(2500);if(window.__r2)return;win
   U(!!adr&&adr.getAttribute("autocomplete")==="off","champ adresse : attribut autocomplete=\"off\" posé");
   const libres=[...d.querySelectorAll("input")].filter(i=>(i.type==="text"||i.type==="search")&&!i.classList.contains("hm")&&i.id!=="pc-adr-in");
   U(libres.length===0,"un seul champ texte libre dans la page : le champ adresse");
+  /* commune seule tapée au clavier (hors liste proposée) : suggestion sélectionnable, service d'adresses simulé */
+  const oldF=W2.fetch;
+  W2.fetch=async()=>({json:async()=>({status:"OK",results:[
+   {x:1.093917,y:49.327993,kind:"municipality",city:"Tourville-la-Rivière",zipcode:"76410",fulltext:"Tourville-la-Rivière, 76410 Tourville-la-Rivière"},
+   {x:1.068364,y:49.326557,kind:"street",city:"Tourville-la-Rivière",zipcode:"76410",street:"Rue Jean-Baptiste Clément",fulltext:"Rue Jean-Baptiste Clément, 76410 Tourville-la-Rivière"}]})});
+  adr.value="Tourville-la-Rivière";adr.dispatchEvent(new W2.Event("input",{bubbles:true}));await sleep(900);
+  const sugC=[...d.querySelectorAll(".pc-sugg .pc-sug")].find(b=>b.textContent.startsWith("Commune : Tourville-la-Rivière"));
+  U(!!sugC,"commune seule tapée : suggestion « Commune : Tourville-la-Rivière (76410), centre de la commune » proposée");
+  if(sugC){sugC.click();await sleep(300);
+   U(/À quelle heure partez-vous/.test(d.querySelector("#vue-parcours").textContent),"commune choisie : passage à l'étape des horaires");
+   U(/Tourville-la-Rivière \(centre de la commune\)/.test(d.querySelector("#vue-parcours").textContent),"commune choisie : récapitulatif indique le centre de la commune, position approximative");
+   U(!W2.sessionStorage.getItem("tc_parcours"),"commune tapée : rien d'enregistré dans la session, comme pour une adresse");
+   const ret=[...d.querySelectorAll("#vue-parcours .barre-outils button")].find(b=>b.textContent==="Retour");if(ret){ret.click();await sleep(150)}
+  }
+  W2.fetch=oldF;
   const host=d.createElement("div"),payload="<img src=x onerror=window.__inj=1>";
   const inj=W2.TCh("p",{text:payload});host.append(inj);d.body.append(host);
   U(!W2.__inj&&host.querySelectorAll("img").length===0,"helper h() : chaîne hostile rendue inerte (aucun élément créé, aucun script)");
