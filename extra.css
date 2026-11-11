@@ -156,3 +156,26 @@ p,.doux,.sim,.note-limite,.src,li,summary,.case-sem,.leg,.puce-etat{overflow-wra
 .zoom-flot button:disabled{opacity:.4;cursor:default}
 svg.logo{background:none;border-radius:0;box-shadow:none;width:38px;height:38px}
 @media print{.rail-trajets,.zoom-flot,.seg-jours,.seg-sens{display:none!important}}
+
+/* Accueil mobile : la marque et la mention démo restent visibles mais compactes ;
+   les pages de démonstration (Contrôles, Réglages, Réel, Direction) passent derrière
+   le bouton « Plus » au lieu d'être imposées dès l'arrivée. */
+.nav-plus{display:none}
+@media (max-width:640px){
+ .entete{padding:calc(8px + env(safe-area-inset-top)) 12px 4px;gap:8px}
+ .marque{gap:8px}
+ .logo{width:26px;height:26px}
+ .entete h1{font-size:1.05rem}
+ .etiq-demo{font-size:.58rem;padding:3px 8px;letter-spacing:.03em}
+ .onglets-large{margin:2px auto 6px;border-radius:18px}
+ .onglets-large button{padding:7px 2px;min-height:38px;font-size:.74rem;white-space:nowrap;flex:1 1 0}
+ .onglets-large button.sec{display:none}
+ .onglets-large.ouvert{flex-wrap:wrap}
+ .onglets-large.ouvert button{flex:1 1 22%}
+ .onglets-large.ouvert button.sec{display:block;font-size:.66rem;min-height:32px;padding:5px 2px;opacity:.85}
+ .onglets-large.ouvert button.sec.actif{opacity:1}
+ .nav-plus{display:block;flex:0 0 auto;min-height:32px;padding:5px 8px;font-size:.66rem;font-weight:700;color:var(--bordeaux);background:none;border:0;border-radius:999px;cursor:pointer}
+ .onglets-large.ouvert .nav-plus{flex:1 1 22%}
+ .pc-carte h2{font-size:1.18rem}
+ .carte{padding:12px;margin-bottom:10px}
+}
