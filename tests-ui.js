@@ -120,8 +120,11 @@ fr.addEventListener("load",async()=>{await sleep(2500);if(window.__r2)return;win
   U(/plus de 6 mois/.test(v().textContent),"tracés anciens : alerte d'expiration affichée (seuil convention de démonstration, pas une garantie)");
   W2.TCROUTE.date=date0;rerend();
   U(!/plus de 6 mois/.test(v().textContent),"tracés à jour : pas d'alerte d'expiration");
-  const libres=[...d.querySelectorAll("input")].filter(i=>(i.type==="text"||i.type==="search")&&!i.classList.contains("hm"));
-  U(libres.length===0,"aucun champ texte libre : surface d'injection réduite, données internes rendues via textContent");
+  const adr=d.querySelector("#pc-adr-in");
+  U(!!adr&&adr.type==="text","champ adresse présent à l'étape 1");
+  U(!!adr&&adr.getAttribute("autocomplete")==="off","champ adresse : attribut autocomplete=\"off\" posé");
+  const libres=[...d.querySelectorAll("input")].filter(i=>(i.type==="text"||i.type==="search")&&!i.classList.contains("hm")&&i.id!=="pc-adr-in");
+  U(libres.length===0,"un seul champ texte libre dans la page : le champ adresse");
   const host=d.createElement("div"),payload="<img src=x onerror=window.__inj=1>";
   const inj=W2.TCh("p",{text:payload});host.append(inj);d.body.append(host);
   U(!W2.__inj&&host.querySelectorAll("img").length===0,"helper h() : chaîne hostile rendue inerte (aucun élément créé, aucun script)");

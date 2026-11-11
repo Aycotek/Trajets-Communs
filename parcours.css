@@ -27,3 +27,12 @@
 .pc-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--c,#6b1d2c);color:#fff;font-size:.78rem;font-weight:700;margin-right:6px;vertical-align:1px}
 .pc .horaire{min-width:150px}
 .horaire .pc-num{color:#fff;font-size:.78rem}
+
+/* Saisie d'adresse (reprise de la page d'essai) */
+.pc-adr input{width:100%;box-sizing:border-box;min-height:52px;border-radius:14px;border:1px solid var(--bord);padding:0 14px;font:inherit;font-size:1rem;background:#fff;color:var(--bordeaux-nuit)}
+.pc-sugg{display:grid;gap:8px;margin:8px 0}
+.pc-sug{text-align:left;padding:10px 12px;height:auto;min-height:48px}
+.pc-secours{margin-top:10px}
+.pc-secours summary{cursor:pointer;font-weight:600;color:var(--bordeaux);min-height:44px;display:flex;align-items:center}
+.pc-conf{margin-top:8px}
+.pc-conf summary{cursor:pointer;font-size:.82rem;font-weight:600;color:var(--doux);min-height:36px;display:flex;align-items:center}

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://data.geopf.fr; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://data.geopf.fr; connect-src https://data.geopf.fr https://router.project-osrm.org; object-src 'none'; base-uri 'self'; form-action 'none'; upgrade-insecure-requests">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="theme-color" content="#6b1d2c">
 <title>Trajets Communs - démonstration</title>
@@ -35,10 +35,11 @@
   <button data-vue="carte" role="tab">Carte</button>
   <button data-vue="semaine" role="tab">Quotidien</button>
   <button data-vue="profil" role="tab">Profil</button>
-  <button data-vue="controles" role="tab">Contrôles</button>
-  <button data-vue="reglages" role="tab">Réglages</button>
-  <button data-vue="reel" role="tab">Réel</button>
-  <button data-vue="dg" role="tab">Direction</button>
+  <button data-vue="controles" role="tab" class="sec">Contrôles</button>
+  <button data-vue="reglages" role="tab" class="sec">Réglages</button>
+  <button data-vue="reel" role="tab" class="sec">Réel</button>
+  <button data-vue="dg" role="tab" class="sec">Direction</button>
+  <button type="button" id="nav-plus" class="nav-plus" aria-expanded="false" aria-label="Afficher les pages Contrôles, Réglages, Réel et Direction">Plus</button>
 </nav>
 <main>
   <section id="vue-parcours" class="vue actif"></section>
@@ -52,7 +53,7 @@
 </main>
 <footer class="pied">
   <p>Aucun salarié réel, aucun domicile réel, aucune trace GPS réelle. Les profils portent des noms d'arbres. Le site d'arrivée, les gares et les centres de communes sont les seuls points réels. Les gains sont des estimations avec hypothèses visibles, pas des mesures. Aucune certification n'est revendiquée. Voir <a href="SOURCES.md">SOURCES.md</a> et <a href="SECURITE.md">SECURITE.md</a>.</p>
-  <p>Trajets Communs est une démonstration d'application de covoiturage domicile-travail pour un site d'entreprise, pensée pour le site de Mont-Saint-Aignan (Seine-Maritime). Elle simule comment des collaborateurs aux horaires compatibles pourraient former des groupes, avec des bilans CO2 et euros qui restent des estimations affichées avec leurs hypothèses. Aucune réservation réelle, aucun compte, aucun profil de salarié réel : les participants sont inventés et les durées précalculées ; tes choix de parcours sont stockés dans la session du navigateur. Code source ouvert sur GitHub.</p>
+  <p>Trajets Communs est une démonstration d'application de covoiturage domicile-travail pour un site d'entreprise, pensée pour le site de Mont-Saint-Aignan (Seine-Maritime). Elle simule comment des collaborateurs aux horaires compatibles pourraient former des groupes, avec des bilans CO2 et euros qui restent des estimations affichées avec leurs hypothèses. Aucune réservation réelle, aucun compte, aucun profil de salarié réel : les participants sont inventés et les durées précalculées ; tes choix de parcours (commune, horaires) sont stockés dans la session du navigateur ; une adresse saisie n'est pas stockée par cette page. Code source ouvert sur GitHub.</p>
 </footer>
 <script src="route-data.js"></script>
 <script src="route-legs.js"></script>
