@@ -544,8 +544,8 @@ function vueReel(){
 }
 
 function all(){vueSemaine();vueDG();vueCarte();vueProfil();vueControles();vueReglages();vueReel()}
-document.querySelectorAll(".onglets button").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".onglets button").forEach(x=>x.classList.toggle("actif",x===b));document.querySelectorAll(".vue").forEach(v=>v.classList.toggle("actif",v.id==="vue-"+b.dataset.vue));window.scrollTo(0,0)}));
-{const tabs=[...document.querySelectorAll(".onglets button")];
+document.querySelectorAll(".onglets button[data-vue]").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".onglets button[data-vue]").forEach(x=>x.classList.toggle("actif",x===b));document.querySelectorAll(".vue").forEach(v=>v.classList.toggle("actif",v.id==="vue-"+b.dataset.vue));window.scrollTo(0,0)}));
+{const tabs=[...document.querySelectorAll(".onglets button[data-vue]")];
  const maj=()=>tabs.forEach(x=>x.setAttribute("aria-selected",x.classList.contains("actif")?"true":"false"));
  tabs.forEach((b,i)=>{b.addEventListener("click",maj);
   b.addEventListener("keydown",e=>{let j=null;const d={ArrowRight:1,ArrowLeft:-1}[e.key];
@@ -555,3 +555,7 @@ document.querySelectorAll(".onglets button").forEach(b=>b.addEventListener("clic
 recompute();all();
 const hv=(location.hash||"").slice(1);if(hv){const b=document.querySelector('.onglets button[data-vue="'+hv.replace(/[^a-z]/g,"")+'"]');if(b){b.click();const m=/-(\d+)$/.exec(location.hash);if(m&&hv.startsWith('carte')){S.carteSel=+m[1];vueCarte()}}}
 })();
+
+/* Bouton « Plus » : les pages de démonstration (Contrôles, Réglages, Réel, Direction) restent accessibles sans être imposées à l'arrivée. */
+const np=document.getElementById("nav-plus");
+if(np)np.addEventListener("click",()=>{const nav=np.closest("nav"),ouvert=nav.classList.toggle("ouvert");np.setAttribute("aria-expanded",String(ouvert));np.textContent=ouvert?"Moins":"Plus"});
