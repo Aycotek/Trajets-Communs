@@ -30,7 +30,7 @@ function sauve(){if(st.adr)return;try{sessionStorage.setItem("tc_parcours",JSON.
 /* ---------- Calcul de la proposition ---------- */
 function domicileFictif(nom){const c=D.COMMUNES.find(x=>x.n===nom);const loc=pop.filter(x=>x.commune===nom);const liste=loc.length?loc:pop;let best=liste[0];for(const x of liste)if(E.hav(x.home,c)<E.hav(best.home,c))best=x;return {home:best.home,exact:loc.length>0}}
 function calcule(){
- const c=st.adr?{n:st.adr.label}:D.COMMUNES.find(x=>x.n===st.commune),d=st.adr?{home:{lat:+st.adr.lat.toFixed(5),lng:+st.adr.lng.toFixed(5)},exact:true}:domicileFictif(st.commune);
+ const c=st.adr?{n:st.adr.label}:D.COMMUNES.find(x=>x.n===st.commune),d=st.adr?{home:{lat:+st.adr.lat.toFixed(5),lng:+st.adr.lng.toFixed(5)},exact:!st.adr.commune}:domicileFictif(st.commune);
  const solo=tt(d.home,D.SITE);
  st.vous={id:"VOUS",nom:"Vous",commune:c.n,home:d.home,role:"flexible",aVoiture:true,mode:"domicile",gare:null,adresse:st.adr?st.adr.label:"",jours:null};
  st.exact=d.exact;st.arr=st.dep+solo;
@@ -166,14 +166,15 @@ async function lance(){
 }
 function adresseUI(){
  const w=h("div",{class:"pc-adr"});
- const inp=h("input",{id:"pc-adr-in",type:"text",autocomplete:"off",enterkeyhint:"search",placeholder:"ex. 12 rue de la République, Rouen","aria-label":"Votre adresse avec le numéro"});
+ const inp=h("input",{id:"pc-adr-in",type:"text",autocomplete:"off",enterkeyhint:"search",placeholder:"ex. Tourville-la-Rivière ou 12 rue de la République, Rouen","aria-label":"Votre adresse exacte ou votre commune"});
  const liste=h("div",{class:"pc-sugg",role:"group","aria-label":"Adresses suggérées"}),msg=h("p",{class:"doux",role:"status"});
  let tm,seq=0;
  inp.addEventListener("input",()=>{clearTimeout(tm);const q=inp.value.trim();liste.replaceChildren();msg.textContent="";if(q.length<5)return;
   tm=setTimeout(async()=>{const my=++seq;try{const r=await fetch("https://data.geopf.fr/geocodage/completion/?type=StreetAddress&maximumResponses=8&text="+encodeURIComponent(q));const j=await r.json();if(my!==seq)return;
-   const ok=(j.results||[]).filter(x=>x.kind==="housenumber");
-   liste.replaceChildren(...ok.slice(0,6).map(x=>h("button",{type:"button",class:"pc-puce pc-sug",onclick:()=>{st.adr={lat:x.y,lng:x.x,label:x.fulltext};st.commune=null;st.erreur=null;st.etape=2;st.matP=ajouteDomicile(st.adr);st.matP.catch(()=>{});rend()},text:x.fulltext})));
-   if(!ok.length)msg.textContent=(j.results||[]).length?"Ajoutez le numéro de la rue pour un point exact.":"Aucune adresse trouvée."}catch(e){msg.textContent="La recherche d'adresse est indisponible pour le moment."}},350)});
+   const res=j.results||[],ok=res.filter(x=>x.kind==="housenumber"),villes=res.filter(x=>x.kind==="municipality");
+   liste.replaceChildren(...ok.slice(0,6).map(x=>h("button",{type:"button",class:"pc-puce pc-sug",onclick:()=>{st.adr={lat:x.y,lng:x.x,label:x.fulltext};st.commune=null;st.erreur=null;st.etape=2;st.matP=ajouteDomicile(st.adr);st.matP.catch(()=>{});rend()},text:x.fulltext})),
+    ...villes.slice(0,3).map(x=>h("button",{type:"button",class:"pc-puce pc-sug",onclick:()=>{st.adr={lat:x.y,lng:x.x,label:x.city,commune:true};st.commune=null;st.erreur=null;st.etape=2;st.matP=ajouteDomicile(st.adr);st.matP.catch(()=>{});rend()},text:"Commune : "+x.city+(x.zipcode?" ("+x.zipcode+")":"")+", centre de la commune"})));
+   if(!ok.length&&!villes.length)msg.textContent=res.length?"Ajoutez le numéro de la rue pour un point exact, ou le nom de votre commune seule.":"Aucune adresse ni commune trouvée."}catch(e){msg.textContent="La recherche d'adresse est indisponible pour le moment."}},350)});
  w.append(inp,liste,msg,h("details",{class:"pc-secours pc-conf"},h("summary",{text:"Détails : services utilisés et journaux"}),h("p",{class:"note-limite",text:"Confidentialité : ce que vous tapez est envoyé au service d'adresses de l'IGN (Géoplateforme), puis les coordonnées de l'adresse choisie au serveur d'itinéraires public OSRM, pour calculer les durées. Cette page ne stocke pas l'adresse et ne la met pas dans la session sauvegardée ; le navigateur (historique, saisie automatique) et ces services peuvent garder leurs propres traces."})));
  return w;
 }
@@ -188,7 +189,7 @@ function puces(liste,actuel,choisit,cls){return h("div",{class:"pc-grille "+(cls
 function recap(){
  const r=h("div",{class:"pc-recap"});
  const it=(t,e)=>h("button",{type:"button",class:"pc-etiq",onclick:()=>{st.etape=e;rend()},"aria-label":"Modifier : "+t},t," ",h("span",{"aria-hidden":"true",text:"✎"}));
- if(lieu()&&st.etape>1)r.append(it(st.adr?"Adresse choisie":st.commune,1));
+ if(lieu()&&st.etape>1)r.append(it(st.adr?(st.adr.commune?st.adr.label+" (centre de la commune)":"Adresse choisie"):st.commune,1));
  if(st.dep!=null&&st.etape>2)r.append(it("Départ "+hm(st.dep),2));
  if(st.quit!=null&&st.etape>3)r.append(it("Retour "+hm(st.quit),3));
  return r.children.length?r:null;
@@ -196,13 +197,13 @@ function recap(){
 function etapes(){
  const n=st.etape;
  const titres=["Où habitez-vous ?","À quelle heure partez-vous de chez vous le matin ?","À quelle heure quittez-vous le travail le soir ?"];
- const aides=["Adresse exacte ou commune, au choix. L'adresse tapée part au service d'adresses de l'IGN, puis ses coordonnées au serveur d'itinéraires OSRM ; cette page ne la stocke pas. Avec une commune, le départ est un domicile fictif de cette commune.","Heure à laquelle vous quittez votre domicile pour aller travailler. Les propositions restent à 10 minutes maximum de cette heure.","Heure à laquelle vous quittez le travail pour rentrer. Les propositions restent à 10 minutes maximum de cette heure."];
+ const aides=["Adresse exacte ou commune, au choix. L'adresse ou la commune tapée part au service d'adresses de l'IGN, puis ses coordonnées au serveur d'itinéraires OSRM ; cette page ne la stocke pas. Avec une adresse, le départ est le point exact ; avec une commune, c'est le centre de la commune, une position approximative.","Heure à laquelle vous quittez votre domicile pour aller travailler. Les propositions restent à 10 minutes maximum de cette heure.","Heure à laquelle vous quittez le travail pour rentrer. Les propositions restent à 10 minutes maximum de cette heure."];
  const t=h("h2",{id:"pc-titre",tabindex:"-1",text:titres[n-1]});focus=t;
  const card=h("div",{class:"carte pc-carte"},
   h("div",{class:"pc-prog","aria-label":"Étape "+n+" sur 3"},[1,2,3].map(i=>h("i",{class:i<=n?"on":""}))),
   h("p",{class:"surtitre",text:"Étape "+n+" sur 3"}),t,h("p",{class:"doux",text:aides[n-1]}));
  const rc=recap();if(rc)card.append(rc);
- if(n===1){card.append(adresseUI());card.append(h("details",{class:"pc-secours"},h("summary",{text:"Sans adresse : choisir une commune (domicile fictif)"}),puces(COMMUNES.map(c=>({val:c,txt:c})),st.commune,c=>{st.adr=null;st.matP=null;st.erreur=null;st.commune=c;st.etape=2;sauve();rend()},"pc-communes")))}
+ if(n===1)card.append(adresseUI());
  if(n===2){const l=[];for(let m=390;m<=540;m+=15)l.push({val:m,txt:hm(m)});card.append(puces(l,st.dep,v=>{st.dep=v;st.etape=3;sauve();rend()},"pc-heures"))}
  if(n===3){const l=[];for(let m=960;m<=1170;m+=15)l.push({val:m,txt:hm(m)});card.append(puces(l,st.quit,v=>{st.quit=v;st.etape=4;sauve();lance()},"pc-heures"))}
  if(n>1)card.append(h("div",{class:"barre-outils"},h("button",{type:"button",onclick:()=>{st.etape=n-1;rend()},text:"Retour"})));
@@ -214,7 +215,7 @@ function resultat(){
  const titre=h("h2",{id:"pc-titre",tabindex:"-1",text:st.best?"Votre proposition de covoiturage":"Pas de proposition avec ces horaires"});focus=titre;
  card.append(titre);
  const rc=h("div",{class:"pc-recap"},
-  h("button",{type:"button",class:"pc-etiq",onclick:()=>{st.etape=1;rend()},"aria-label":"Modifier mes réponses"},(st.adr?"Adresse choisie":st.commune)+" · départ "+hm(st.dep)+" · retour "+hm(st.quit)+" ",h("span",{"aria-hidden":"true",text:"✎"})));
+  h("button",{type:"button",class:"pc-etiq",onclick:()=>{st.etape=1;rend()},"aria-label":"Modifier mes réponses"},(st.adr?(st.adr.commune?st.adr.label+" (centre de la commune)":"Adresse choisie"):st.commune)+" · départ "+hm(st.dep)+" · retour "+hm(st.quit)+" ",h("span",{"aria-hidden":"true",text:"✎"})));
  card.append(rc);
  if(!st.best){
   card.append(h("p",{text:"Aucun des "+pop.length+" profils fictifs n'a un trajet compatible avec vos horaires (détour maximal "+p.maxDetourKm+" km, "+p.maxExtraMin+" min en plus). Aucun trajet n'est promis."}),h("p",{class:"doux",text:"Essayez de décaler l'heure de départ ou de retour."}),h("div",{class:"barre-outils"},h("button",{type:"button",class:"actif",onclick:()=>{st.etape=2;rend()},text:"Changer mes horaires"})));
@@ -283,7 +284,7 @@ function rend(garderPos){
   }else wrap.append(h("div",{class:"carte pc-carte-zone"},h("div",{class:"carte-zone"},carte({options:[],sel:null}))));
  }
  wrap.append(h("p",{id:"pc-tuiles",class:"note-limite",hidden:"",text:"Le fond de carte Plan IGN n'a pas pu être chargé, ou seulement en partie. Les trajets et la version texte restent utilisables."}));
- wrap.append(h("div",{class:"sim",role:"note"},"Démonstration : 28 profils inventés, aucun compte, aucun vrai collègue, rien n'est envoyé ni réservé. "+(st.vous?"Vous êtes supposé flexible (conducteur ou passager selon le trajet) ; "+st.nbPartenaires+" profils sur "+pop.length+" ont au moins un trajet compatible avec vos horaires. "+(st.adr?"Votre point de départ est l'adresse choisie ; les durées sont calculées à la demande par le serveur public OSRM, sans trafic, et les tracés depuis cette adresse restent indicatifs (pointillés).":"Votre point de départ est un domicile fictif de "+st.commune+(st.exact?"":" (le plus proche, cette commune n'en compte pas dans le jeu)")+", pour utiliser les durées routières précalculées.")+" La carte indique votre heure de départ (matin) ou de départ du travail (soir) ; les numéros renvoient aux cartes horaires. Les tracés suivent les routes (calcul OSRM précalculé, sans trafic : les durées sont des estimations hors circulation). Pointillé : tracé indicatif quand un tronçon n'est pas disponible. ":"")+"Fond Plan IGN : votre navigateur envoie votre adresse IP et la zone affichée au serveur de tuiles IGN."));
+ wrap.append(h("div",{class:"sim",role:"note"},"Démonstration : 28 profils inventés, aucun compte, aucun vrai collègue, rien n'est envoyé ni réservé. "+(st.vous?"Vous êtes supposé flexible (conducteur ou passager selon le trajet) ; "+st.nbPartenaires+" profils sur "+pop.length+" ont au moins un trajet compatible avec vos horaires. "+(st.adr?(st.adr.commune?"Votre point de départ est le centre de "+st.adr.label+", une position approximative et non une adresse exacte ; les durées sont calculées à la demande par le serveur public OSRM, sans trafic, et les tracés depuis ce point restent indicatifs (pointillés).":"Votre point de départ est l'adresse choisie ; les durées sont calculées à la demande par le serveur public OSRM, sans trafic, et les tracés depuis cette adresse restent indicatifs (pointillés)."):"Votre point de départ est un domicile fictif de "+st.commune+(st.exact?"":" (le plus proche, cette commune n'en compte pas dans le jeu)")+", pour utiliser les durées routières précalculées.")+" La carte indique votre heure de départ (matin) ou de départ du travail (soir) ; les numéros renvoient aux cartes horaires. Les tracés suivent les routes (calcul OSRM précalculé, sans trafic : les durées sont des estimations hors circulation). Pointillé : tracé indicatif quand un tronçon n'est pas disponible. ":"")+"Fond Plan IGN : votre navigateur envoie votre adresse IP et la zone affichée au serveur de tuiles IGN."));
  wrap.append(h("p",{class:"doux pc-lien"},"Voir tous les trajets de la démonstration dans l'onglet ",h("button",{type:"button",class:"pc-lien-btn",onclick:()=>{const b=document.querySelector('.onglets button[data-vue="carte"]');if(b)b.click()},text:"Carte"}),"."));
  root.append(wrap);
  if(garderPos){window.scrollTo(0,y0)}
