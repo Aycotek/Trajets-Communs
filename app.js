@@ -39,6 +39,7 @@ function vueDG0(){
   simBandeau("Simulation : profils, domiciles, traces de test et taux d'acceptation sont inventés. Ils illustrent le calcul, ils ne prédisent pas l'adoption réelle."),
   h("h3",{text:"Trois niveaux, jamais mélangés"}),
   etage([["Potentiel estimé : trajets proposés par l'algorithme",L.pot.n,"",L.pot.n],["Trajets déclarés : propositions acceptées",L.dec.n,"c2",L.pot.n],["Trajets corroborés : traces de test conformes",L.cor.n,"c3",L.pot.n]]),
+  h("p",{class:"doux",text:"Limites appliquées à toutes les propositions : le conducteur passe à moins de 2 km du point de prise en charge et n'ajoute pas plus de 8 min de route, arrêt compris ; 15 min en plus maximum pour un passager ; détour du conducteur limité à 8 km. Un trajet dont la proximité ne peut pas être vérifiée n'est pas proposé."}),
   h("div",{class:"grille"},
    kpi(rate(L.cor.n,L.dec.n),"des trajets déclarés corroborés (test)"),
    kpi(L.cor.people.size+" / "+present,"profils ayant fait au moins un trajet corroboré"),
@@ -96,8 +97,8 @@ function carteTrajet(t){
  return h("div",{class:"trajet"},
   h("div",{class:"trajet-tete"},h("span",{class:"heure",text:(t.dir==="matin"?"Départ ":"Départ du site ")+E.hm(e.depart)+" → arrivée "+E.hm(e.arrive)}),h("span",{class:"puce-etat "+etat[0],text:etat[1]})),
   lignes,
-  h("div",{class:"ligne-m"},h("span",{text:"Trajet estimé "+f1(e.km)+" km"}),h("span",{text:"détour conducteur "+f1(e.detour)+" km"}),h("span",{text:"temps en plus passager max "+f0(Math.max(...e.extras.map(x=>x.extra)))+" min"}),h("span",{text:"CO₂ net brut "+kg(m.brut)+" · prudent "+kg(m.prudent)}),h("span",{text:"part de frais par occupant "+eur2(m.share)})),
-  h("div",{class:"doux",text:"Distances et durées "+(S.p.routeReel&&window.TCROUTE?"routières précalculées (OSRM/OpenStreetMap, sans trafic)":"estimées à vol d'oiseau x "+S.p.detourFacteur)+"."}));
+  h("div",{class:"ligne-m"},h("span",{text:"Trajet estimé "+f1(e.km)+" km"}),h("span",{text:"détour conducteur "+f1(e.detourAff)+" km"}),h("span",{text:"temps en plus passager max "+f0(Math.max(...e.extras.map(x=>x.extra)))+" min"}),h("span",{text:"CO₂ net brut "+kg(m.brut)+" · prudent "+kg(m.prudent)}),h("span",{text:"part de frais par occupant "+eur2(m.share)})),
+  h("div",{class:"doux",text:"Distances et durées routières précalculées (OSRM/OpenStreetMap, sans trafic). Propositions limitées aux trajets dont le conducteur passe à moins de 2 km du point de prise en charge et n'ajoutent pas plus de 8 min de route, arrêt compris (15 min en plus maximum pour un passager, détour limité à 8 km)."}));
 }
 
 /* Préparation collective : préférences locales, jamais accords automatiques. */
@@ -129,7 +130,7 @@ function panneauRecherche(uid,day,dir){
  if(S.trio)cands.push(...trinomes(uid,day,dir));
  const shown=S.search&&hab?cands.filter(t=>groupe(t).some(id=>!hab.ids.includes(id))):cands;
  if(!shown.length)box.append(h("p",{text:"Aucun nouveau partenaire compatible dans ce jeu fictif pour ce créneau. Vous pouvez changer de jour ou modifier vos horaires dans Profil. Aucun trajet n'est promis."}));
- shown.forEach((t,i)=>{const ys=[t.drv,...t.pax].filter(q=>q.id!==uid),y=ys[0];const b=h("div",{class:"trajet"},h("b",{text:ys.map(q=>q.nom+" · "+q.commune).join(" + ")}),h("p",{class:"doux",text:f1(E.hav(x.home,y.home))+" km entre domiciles à vol d'oiseau · départ "+E.hm(t.ev.depart)+" · détour conducteur "+f1(t.ev.detour)+" km"}),h("div",{class:"barre-outils"},h("button",{onclick:()=>{S.preview=t;S.cartePers=null;vueCarte()},text:t.pax.length===2?"Visualiser ce trinôme":"Visualiser ce binôme"})));box.append(b)});
+ shown.forEach((t,i)=>{const ys=[t.drv,...t.pax].filter(q=>q.id!==uid),y=ys[0];const b=h("div",{class:"trajet"},h("b",{text:ys.map(q=>q.nom+" · "+q.commune).join(" + ")}),h("p",{class:"doux",text:f1(E.hav(x.home,y.home))+" km entre domiciles à vol d'oiseau · départ "+E.hm(t.ev.depart)+" · détour conducteur "+f1(t.ev.detourAff)+" km"}),h("div",{class:"barre-outils"},h("button",{onclick:()=>{S.preview=t;S.cartePers=null;vueCarte()},text:t.pax.length===2?"Visualiser ce trinôme":"Visualiser ce binôme"})));box.append(b)});
  if(S.preview)box.append(h("p",{text:"Proposition visualisée, pas réservée."}));
  return box;
 }
@@ -279,7 +280,7 @@ dessin.forEach((t,i)=>{const c=colDe(t),faint=!!sel&&t!==sel;const g=R&&R.routes
    pan.append(h("p",{text:"Trajet proposé "+E.JOURS[S.carteJour].toLowerCase()+" "+S.carteDir+" : "+(pt.drv.id===px.id?"conducteur":"passager")+", départ "+E.hm(pt.ev.depart)+", arrivée "+E.hm(pt.ev.arrive)+", "+(pt.pax.length)+" passager(s)."+(pt.drv.id!==px.id?" Conducteur : "+pt.drv.nom+" (fictif).":"")}),
     h("div",{class:"barre-outils"},h("button",{type:"button",id:"pers-voir",onclick:()=>{S.carteSel=idx;S.carteDz=0;S.cartePers=null;vueCarte();const n=document.getElementById("carte-choix");if(n)n.focus()},text:"Voir le détail de ce trajet"})));
   }else if(pj.present){
-   pan.append(h("p",{class:"doux",text:"Aucun partenaire compatible ce jour et ce sens (horaires, détour maximal, temps en plus). Rien n'est proposé pour cette personne et aucun repli (taxi, prise en charge par l'entreprise) n'est promis."}));
+   pan.append(h("p",{class:"doux",text:"Aucun partenaire compatible ce jour et ce sens (horaires, 8 min de route ajoutées au conducteur arrêt compris, 2 km de proximité, 15 min en plus pour un passager, détour limité à 8 km). Rien n'est proposé pour cette personne et aucun repli (taxi, prise en charge par l'entreprise) n'est promis."}));
   }
   pan.append(h("div",{class:"barre-outils"},h("button",{type:"button",id:"pers-fermer",onclick:()=>{S.cartePers=null;vueCarte()},text:"Fermer"})));
   pan.append(h("div",{class:"barre-outils"},h("button",{onclick:()=>{S.profil=px.id;S.search=true;vueCarte()},text:"Chercher des partenaires compatibles"})));
@@ -303,13 +304,13 @@ dessin.forEach((t,i)=>{const c=colDe(t),faint=!!sel&&t!==sel;const g=R&&R.routes
   el.querySelector(".carte").append(h("p",{class:"doux",text:"Aucun trajet sélectionné : touchez une carte horaire au-dessus de la carte, une pastille d'heure ou un tracé coloré pour un trajet, ou un rond ou un losange pour voir les trajets d'une personne."}));
  }
  function detTrajet(){const b=$("#detail-trajet");if(!b)return;
- if(S.preview){b.replaceChildren(h("div",{class:"sim",text:"Préparation fictive : "+[sel.drv,...sel.pax].map(q=>q.nom).join(" + ")+". Ce groupe n'est pas réservé. Aucun accord existant n'est changé et aucun gain n'est ajouté au bilan."}),h("p",{text:"Départ "+E.hm(sel.ev.depart)+", arrivée "+E.hm(sel.ev.arrive)+", "+f1(sel.ev.km)+" km, détour "+f1(sel.ev.detour)+" km."}),h("div",{class:"barre-outils"},h("button",{onclick:()=>choisirGroupe(sel,S.profil),text:sel.pax.length===2?"Garder ce trinôme comme groupe habituel (simulation)":"Garder ce binôme comme groupe habituel (simulation)"}),h("button",{onclick:()=>{S.preview=null;S.cartePers=S.profil;vueCarte()},text:"Revenir aux partenaires"})));return}
+ if(S.preview){b.replaceChildren(h("div",{class:"sim",text:"Préparation fictive : "+[sel.drv,...sel.pax].map(q=>q.nom).join(" + ")+". Ce groupe n'est pas réservé. Aucun accord existant n'est changé et aucun gain n'est ajouté au bilan."}),h("p",{text:"Départ "+E.hm(sel.ev.depart)+", arrivée "+E.hm(sel.ev.arrive)+", "+f1(sel.ev.km)+" km, détour "+f1(sel.ev.detourAff)+" km."}),h("div",{class:"barre-outils"},h("button",{onclick:()=>choisirGroupe(sel,S.profil),text:sel.pax.length===2?"Garder ce trinôme comme groupe habituel (simulation)":"Garder ce binôme comme groupe habituel (simulation)"}),h("button",{onclick:()=>{S.preview=null;S.cartePers=S.profil;vueCarte()},text:"Revenir aux partenaires"})));return}
  b.replaceChildren(carteTrajet(sel),actionsCarte(sel,S.carteJour,S.carteDir),h("div",{class:"barre-outils"},groupe(sel).includes(S.profil)?h("button",{onclick:()=>choisirGroupe(sel,S.profil),text:"Garder ce groupe habituel (simulation)"}):h("span",{class:"doux",text:"Choisissez un profil de ce groupe pour le garder comme habitude."})))
  }
  {const cur=rail.querySelector(".actif");if(cur)rail.scrollLeft=Math.max(0,cur.offsetLeft-(rail.clientWidth-cur.offsetWidth)/2)}
  el.querySelector(".carte").append(panneauDeplace());
  const i1=el.querySelector(".leg i.d1"),i2=el.querySelector(".leg i.d2");i1.style.background="#6b1d2c";i2.style.background="#b9802f";
- const liste=h("ol",{class:"liste-carte"},ts.map(t=>h("li",null,h("b",{text:t.drv.nom}),(" conduit : "+t.ev.pts.slice(0,-1).length+" arrêt(s) avant le site, départ "+E.hm(t.ev.depart)+", arrivée "+E.hm(t.ev.arrive)+", "+f1(t.ev.km)+" km, détour "+f1(t.ev.detour)+" km. Passagers : "+t.pax.map(x=>x.nom+(x.mode==="gare"?" (« "+lblPoint(x)+" »)":" (domicile)")).join(", ")+"."))));
+ const liste=h("ol",{class:"liste-carte"},ts.map(t=>h("li",null,h("b",{text:t.drv.nom}),(" conduit : "+t.ev.pts.slice(0,-1).length+" arrêt(s) avant le site, départ "+E.hm(t.ev.depart)+", arrivée "+E.hm(t.ev.arrive)+", "+f1(t.ev.km)+" km, détour "+f1(t.ev.detourAff)+" km. Passagers : "+t.pax.map(x=>x.nom+(x.mode==="gare"?" (« "+lblPoint(x)+" »)":" (domicile)")).join(", ")+"."))));
  el.querySelector(".carte").append(h("details",{open:""},h("summary",{text:"Version texte de la carte ("+ts.length+" trajet(s))"}),ts.length?liste:h("p",{class:"doux",text:"Aucun trajet ce jour et ce sens."})));
 }
 
@@ -397,7 +398,7 @@ function etatCase(x,day,dir){
  const mo0=S.out[slotK(day,dir,x.id)],mo=mo0==="+"?null:mo0,ajoute=mo0==="+";
  if(mo)return {k:"refus",t:mo==="refuse"?"Refusé par vous":"Annulé par vous",d:"Vous êtes retiré de ce créneau : le trajet est recalculé sans vous, capacité, détour et bilans compris. Vous pouvez revenir sur ce choix.",trip:null,mo};
  const t=S.res.trips.find(q=>q.day===day&&q.dir===dir&&(q.drv.id===x.id||q.pax.some(y=>y.id===x.id)));
- if(!t)return {k:"seul",t:"Pas de trajet proposé",d:"Aucun partenaire compatible avec vos horaires, le détour maximal ou le temps en plus. Rien n'est réservé. Aucun repli (taxi, prise en charge par l'entreprise) n'est promis.",trip:null};
+ if(!t)return {k:"seul",t:"Pas de trajet proposé",d:"Aucun partenaire compatible avec vos horaires et les limites de la démonstration (8 min de route ajoutées au conducteur, arrêt compris ; passage à moins de 2 km de votre point de prise en charge ; 15 min en plus maximum pour un passager ; détour limité à 8 km). Rien n'est réservé. Aucun repli (taxi, prise en charge par l'entreprise) n'est promis.",trip:null};
  const mien=S.dec[E.tripKey(t)+"#"+x.id]==="accepte";
  if(!mien)return {k:"prop",t:"Proposition à accepter",d:"Rien n'est engagé tant que vous ne l'acceptez pas."+(t.accepte?" Dans les bilans de population ce trajet est compté accepté par un tirage simulé, pas par vous.":""),trip:t};
  if(t.accepte)return {k:"conf",t:"Confirmé (autres participants simulés)",d:"Vous avez accepté et les autres acceptations sont simulées. Avec de vrais utilisateurs, chacun devrait accepter. Cet état n'établit ni présence ni droit à un paiement.",trip:t};
@@ -436,7 +437,7 @@ function vueSemaine(){
   if(e.k==="refus")bar.append(h("button",{type:"button",id:idb+"-ann",onclick:()=>rétablir(day,dir,x.id,idb+"-acc"),text:"Revenir sur ma décision"}));
   if(t){
    const role=t.drv.id===x.id?"conducteur":"passager",rk=E.tripKey(t)+"#"+x.id;
-   ligne.append(h("div",null,"Vous seriez "+role+" : départ "+E.hm(t.ev.depart)+(dir==="matin"?", arrivée au site ":", arrivée ")+E.hm(t.ev.arrive)+", "+f1(t.ev.km)+" km, "+(t.pax.length)+" passager(s), "+f1(t.ev.detour)+" km de détour conducteur."));
+   ligne.append(h("div",null,"Vous seriez "+role+" : départ "+E.hm(t.ev.depart)+(dir==="matin"?", arrivée au site ":", arrivée ")+E.hm(t.ev.arrive)+", "+f1(t.ev.km)+" km, "+(t.pax.length)+" passager(s), "+f1(t.ev.detourAff)+" km de détour conducteur."));
    if(role==="passager"){const me=t.pax.find(q=>q.id===x.id);ligne.append(h("div",null,"Point de prise en charge : "+(me.mode==="gare"?"point « "+lblPoint(me)+" »":"votre domicile (adresse fictive, connue du conducteur après confirmation)")+". Conducteur : profil fictif, identité selon la règle de l'onglet Carte."))}
    else ligne.append(h("div",null,"Passagers : "+t.pax.map(q=>q.mode==="gare"?"point « "+lblPoint(q)+" »":"domicile d'un passager (adresse après confirmation)").join(" ; ")+"."));
    const autresIds=[t.drv,...t.pax].filter(q=>q.id!==x.id).map(q=>q.id);
