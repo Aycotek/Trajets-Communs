@@ -9,6 +9,10 @@ function rng(seed){let a=seed>>>0;return function(){a|=0;a=a+0x6D2B79F5|0;let t=
 E.rng=rng;
 function hav(a,b){const R=6371,r=Math.PI/180;const dLa=(b.lat-a.lat)*r,dLo=(b.lng-a.lng)*r;const x=Math.sin(dLa/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dLo/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
 E.hav=hav;
+/* Limites validées par le commanditaire le 13 nov. 2026 : minutes ajoutées au conducteur <= 8, arrêt compris ; passage à moins de
+   2 km du point de prise en charge. Elles s'appliquent à TOUTES les propositions (moteur donc Quotidien, Carte, DG), pas seulement
+   au parcours « Mon trajet » qui les affiche (parcours.js). Le plafond préexistant maxDetourKm (8 km, choix produit à fixer) reste appliqué en plus. */
+const MAXMIN_CONDUCTEUR=8,CERCLE_KM=2;
 E.defaults=function(){const p={};D.PARAMS.forEach(x=>p[x.k]=x.v);D.REGLES.forEach(x=>p[x.k]=x.v);return p};
 
 /* Population fictive. Les domiciles sont des points inventés autour du centre d'une commune. */
@@ -40,12 +44,18 @@ function ctx(p){
  const R=g.TCROUTE,idx={};
  if(R&&p.routeReel)R.pts.forEach((q,i)=>{idx[q[0].toFixed(5)+","+q[1].toFixed(5)]=i});
  const look=(a,b)=>{const i=idx[RK(a)],j=idx[RK(b)];return(i!==undefined&&j!==undefined&&R.km[i][j]!=null)?[R.km[i][j],R.min[i][j]]:null};
- return {p,dist:(a,b)=>{const r=look(a,b);return r?r[0]:hav(a,b)*p.detourFacteur},tt:(a,b)=>{const r=look(a,b);return r?r[1]:hav(a,b)*p.detourFacteur/p.vitesse*60}}}
+ const geoCache={};
+ const geoHab=home=>{const k=RK(home);if(k in geoCache)return geoCache[k];let geo=null;if(R&&R.routes&&p.routeReel){const i=idx[k];const rr=i!==undefined?R.routes[String(i)]:null;if(rr)geo=rr.map(q=>({lat:q[1],lng:q[0]}))}geoCache[k]=geo;return geo};
+ const proxPt=(pt,geo)=>{let m=Infinity;for(const q of geo){const d=hav(pt,q);if(d<m)m=d}return m};
+ return {p,geoHab,proxPt,inMatrix:home=>idx[RK(home)]!==undefined,dist:(a,b)=>{const r=look(a,b);return r?r[0]:hav(a,b)*p.detourFacteur},tt:(a,b)=>{const r=look(a,b);return r?r[1]:hav(a,b)*p.detourFacteur/p.vitesse*60}}}
 function point(pers){return pers.mode==="gare"&&pers.gare?pers.gare:pers.home}
 
 /* Évalue un groupe (conducteur + passagers ordonnés). Renvoie null si une contrainte casse. */
 function evalGroup(c,dir,drv,pax,day){
  const p=c.p,site=D.SITE,stop=2;
+ /* Exclusion prudente : sans routes réelles précalculées (Réglages, routeReel=0), aucune des règles validées n'est vérifiable
+    (ni les 8 min conducteur sur durées réelles, ni les 2 km sur géométrie réelle) : aucune proposition estimée n'est affichée. */
+ if(!p.routeReel)return null;
  let best=null;
  const perms=pax.length<=1?[pax]:pax.length===2?[[pax[0],pax[1]],[pax[1],pax[0]]]:perm(pax);
  for(const order of perms){
@@ -55,6 +65,10 @@ function evalGroup(c,dir,drv,pax,day){
  }
  const solo=dir==='matin'?c.dist(drv.home,site):c.dist(site,drv.home); /* même sens que le trajet : les routes ne sont pas symétriques (sens uniques) */
  const detour=best.km-solo;
+ /* Un détour négatif est possible avec de vraies routes : OSRM optimise le TEMPS, pas la distance — la route directe la plus
+    rapide peut être plus longue en km que la route via l'arrêt. Le détour réel (filtre, CO2, coûts) garde sa valeur calculée ;
+    la valeur affichée est plafonnée à 0 : un trajet avec arrêt réellement pas plus long ne « gagne » pas de kilomètres. */
+ const detourAff=Math.max(0,detour),negCorrige=detour<-1e-9;
  if(detour>p.maxDetourKm+1e-9)return null;
  const J=m=>m.jours[day];
  const all=[drv,...pax];
@@ -73,7 +87,16 @@ function evalGroup(c,dir,drv,pax,day){
   return {id:x.id,extra:Math.max(0,inCar-soloT)};
  });
  if(extras.some(e=>e.extra>p.maxExtraMin+1e-9))return null;
- return {km:best.km,solo,detour,order:best.order,pts:best.pts,depart,arrive,extras,dir,day,dur};
+ /* Les deux portes validées (8 min conducteur arrêt compris, 2 km du point de prise en charge) filtrent ici, donc dans toutes les vues.
+    Mêmes formules et mêmes durées (matrice OSRM) que drvExtraMin et proxTrajet du parcours : pas de divergence possible entre vues. */
+ const hab=dir==="matin"?c.tt(drv.home,site):c.tt(site,drv.home);
+ if(dur-hab>MAXMIN_CONDUCTEUR+1e-9)return null;
+ const geo=c.geoHab(drv.home);
+ if(geo){for(const x of best.order)if(c.proxPt(point(x),geo)>CERCLE_KM+1e-9)return null}
+ /* Tracé habituel indisponible pour un domicile pourtant précalculé : proximité non vérifiable, trajet exclu.
+    Domicile hors matrice = mode estimation de secours (tests) ou adresse réelle saisie (vérifiée par le parcours lui-même). */
+ else if(drv.id!=="VOUS"&&c.inMatrix(drv.home))return null;
+ return {km:best.km,solo,detour,detourAff,negCorrige,order:best.order,pts:best.pts,depart,arrive,extras,dir,day,dur};
 }
 function perm(a){if(a.length<=1)return[a];const r=[];a.forEach((x,i)=>{perm(a.slice(0,i).concat(a.slice(i+1))).forEach(q=>r.push([x,...q]))});return r}
 
@@ -82,7 +105,11 @@ function metrics(c,drv,g){
  let brut=0,prud=0,paxKm=0,paxCarless=0;
  const euros={pax:0,drv:0};
  const n=g.order.length,occ=n+1;
- const share=g.km*p.coutKm/occ;
+ /* Base de coût cohérente avec le détour AFFICHÉ (detourAff) : une route via un arrêt plus courte en km que la route directe (la plus
+    rapide, d'où le détour négatif) ne crédite personne de kilomètres « gagnés » — le conducteur ne changerait pas d'habitude sans l'arrêt.
+    Sans ce plafond, un détour négatif gonflerait le bilan euros alors que l'écran affiche 0 km de détour. */
+ const kmC=(g.solo+Math.max(0,g.detour))*p.coutKm;
+ const share=kmC/occ;
  g.order.forEach(x=>{
   const km=c.dist(point(x),site);paxKm+=km;
   brut+=km*p.ef;
@@ -90,7 +117,7 @@ function metrics(c,drv,g){
   else{paxCarless++;prud+=km*p.efAlt;euros.pax+=km*p.coutAlt-share}
  });
  const add=Math.max(0,g.detour)*p.ef; /* un détour négatif (route via un arrêt plus courte en km que la route directe, qui est la plus rapide) ne crédite aucun CO2 */
- euros.drv=g.solo*p.coutKm-(g.km*p.coutKm-n*share);
+ euros.drv=g.solo*p.coutKm-(kmC-n*share);
  return {brut:brut-add,prudent:prud-add,detourCO2:add,paxCarless,share,eurosPax:euros.pax,eurosDrv:euros.drv,paxKm};
 }
 
@@ -214,7 +241,7 @@ E.bilan=function(trips,p,seed,over){
  });
  return {L,pairs};
  function blank(){return {n:0,pax:0,paxCarless:0,brut:0,prud:0,eurPax:0,eurDrv:0,km:0,detour:0,people:new Set()}}
- function add(o,t){o.n++;o.pax+=t.pax.length;o.paxCarless+=t.m.paxCarless;o.brut+=t.m.brut;o.prud+=t.m.prudent;o.eurPax+=t.m.eurosPax;o.eurDrv+=t.m.eurosDrv;o.km+=t.ev.km;o.detour+=t.ev.detour;o.people.add(t.drv.id);t.pax.forEach(x=>o.people.add(x.id))}
+ function add(o,t){o.n++;o.pax+=t.pax.length;o.paxCarless+=t.m.paxCarless;o.brut+=t.m.brut;o.prud+=t.m.prudent;o.eurPax+=t.m.eurosPax;o.eurDrv+=t.m.eurosDrv;o.km+=t.ev.km;o.detour+=t.ev.detourAff;o.people.add(t.drv.id);t.pax.forEach(x=>o.people.add(x.id))}
 };
 g.TCENGINE=E;
 if(typeof module!=="undefined")module.exports=E;
