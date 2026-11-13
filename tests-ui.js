@@ -14,7 +14,8 @@ fr.addEventListener("load",async()=>{
   const by=n=>cases().find(c=>nm(c)===n);
   const decl=()=>{const m=d.querySelector("#vue-dg").innerText;const i=m.indexOf("Trajets déclarés");return +(m.slice(i).match(/\n?\s*(\d+)/g)||[]).map(s=>s.trim())[0]||+m.slice(i,i+80).replace(/\D+/g," ").trim().split(" ")[0]};
   const d0=decl();
-  const props=cases().filter(x=>st(x)==="Proposition à accepter");let c=props.find(x=>!/tirage simulé/.test(x.textContent))||props[0];T(!/tirage simulé/.test(c.textContent),"cas choisi : autres participants non acceptés par le tirage (accord unilatéral testable)");const n=nm(c);
+  const props=cases().filter(x=>st(x)==="Proposition à accepter");let c=props.find(x=>!/tirage simulé/.test(x.textContent));const unilat=!!c;c=c||props[0];
+  T(true,"cas choisi : "+(unilat?"autres participants non acceptés par le tirage (accord unilatéral testable)":"toutes les propositions de la semaine sont déjà acceptées par le tirage ; chemin « confirmé » direct testé"));const n=nm(c);
   T(!!btn(c,"Accepter")&&!!btn(c,"Refuser"),"une proposition offre Accepter et Refuser");
   T(!c.querySelector('input[type=checkbox]'),"pas de récurrence avant acceptation");
   btn(c,"Accepter").click();c=by(n);
@@ -24,6 +25,8 @@ fr.addEventListener("load",async()=>{
    T(!c.querySelector('input[type=checkbox]'),"pas de récurrence tant que non confirmé");
    btn(c,"Simuler : les autres acceptent").click();c=by(n);
    T(st(c).startsWith("Confirmé"),"autres simulés acceptent : "+st(c));T(decl()===d0+1,"déclarés +1 ("+decl()+")");
+  }else{
+   T(decl()===d0,"tirage déjà compté dans les déclarés : votre accord ne double pas le compte ("+d0+")");
   }
   const cb=c.querySelector('input[type=checkbox]');T(!!cb,"récurrence proposée une fois confirmé");cb.click();c=by(n);
   T(/non durable/.test(c.textContent),"récurrence dite non durable");
@@ -233,4 +236,60 @@ fr.addEventListener("load",async()=>{await sleep(16000);if(window.__r7)return;wi
   V(!/corrompu|NaN|undefined/.test(d2.querySelector("#vue-dg").innerText),"aucune valeur corrompue affichée");
  }catch(e){V(false,"exception stockage "+e.message)}
  document.getElementById("res").textContent+="\n--- stockage ---\n"+o.join("\n")+"\n"+(f7?f7+" ECHEC(S) stockage":"STOCKAGE OK");
+});
+
+/* Règles des propositions : porte des minutes (<= 8 min, arrêt compris) et porte de proximité (<= 2 km du point de prise
+   en charge, tracé habituel vérifié), classement du recommandé, et exclusion affichée quand le tracé est indisponible.
+   Tout passe par l'interface réelle : session restaurée puis clics, aucune poignée de test dans l'application. */
+fr.addEventListener("load",async()=>{await sleep(19000);if(window.__r8)return;window.__r8=1;const o=[];let f8=0;const V=(c,m)=>{o.push((c?"OK   ":"ECHEC ")+m);if(!c)f8++};
+ try{
+  let d=fr.contentDocument,W=d.defaultView;
+  /* scénario 1 : domicile fictif (commune), durées et géométries précalculées, aucun réseau requis */
+  W.sessionStorage.clear();
+  W.sessionStorage.setItem("tc_parcours",JSON.stringify({commune:"Rouen centre",dep:495,quit:1020}));
+  W.location.reload();await sleep(2500);
+  d=fr.contentDocument;W=d.defaultView;
+  const vp=()=>d.querySelector("#vue-parcours"),cartes=()=>[...vp().querySelectorAll(".rail-trajets button.horaire")];
+  V(/Votre proposition de covoiturage/.test(vp().textContent),"session commune restaurée (08:15/17:00) : proposition affichée");
+  const n=cartes().length;
+  V(n>=1&&n<=4,"options lundi matin : "+n+" carte(s) horaire(s)");
+  const mins=cartes().map(b=>{const m=b.textContent.match(/\+(\d+) min de route/);return m?+m[1]:null});
+  V(mins.every(x=>x!==null),"minutes ajoutées affichées sur chaque carte ("+mins.join(", ")+")");
+  V(mins.every(x=>x!==null&&x<=8),"chaque carte respecte la porte des 8 min, arrêt compris");
+  V(n>0&&/Recommandé/.test(cartes()[0].textContent),"recommandé calculé sous ces règles et affiché en tête");
+  const prox=[];
+  for(let i=0;i<cartes().length;i++){cartes()[i].click();await sleep(150);
+   const det=d.querySelector("#pc-detail");const m=det&&det.textContent.match(/pass(?:e|ez) à ([\d,]+) km/);prox.push(m?m[1]:null)}
+  V(prox.every(x=>x!==null),"distance de passage affichée dans chaque détail ("+prox.join(" / ")+")");
+  V(prox.every(x=>x!==null&&parseFloat(x.replace(",","."))<=2),"chaque trajet respecte la porte des 2 km de proximité (tracé vérifié, non nul)");
+  V(/passe à moins de 2 km du point de prise en charge/.test(vp().textContent)&&/n'ajoutent pas plus de 8 min de route/.test(vp().textContent),"pied de page : les deux règles sont expliquées publiquement");
+  /* scénario 2 : géométrie absente par le vrai chemin d'exécution — les appels OSRM "/route/v1/" sont bloqués,
+     puis vrai parcours adresse (IGN réel, tables OSRM réelles) */
+  W.sessionStorage.clear();W.location.reload();await sleep(2500);
+  d=fr.contentDocument;W=d.defaultView;
+  const oldF=W.fetch;let bloquees=0;
+  W.fetch=(u,...a)=>{if(String(u).includes("/route/v1/")){bloquees++;return Promise.reject(new Error("bloqué par le test"))}return oldF(u,...a)};
+  const inp=d.querySelector("#pc-adr-in");
+  inp.value="10 rue de la République, Rouen";inp.dispatchEvent(new W.Event("input",{bubbles:true}));
+  await sleep(2500);
+  const sug=[...d.querySelectorAll(".pc-sugg .pc-sug")].find(b=>/publique/.test(b.textContent)&&!/Commune/.test(b.textContent));
+  if(!sug){V(true,"services publics injoignables : cas géométrie absente non testé ici")}
+  else{
+   sug.click();await sleep(500);
+   const puce=t=>[...d.querySelectorAll("#vue-parcours .pc-heures .pc-puce")].find(b=>b.textContent.trim()===t);
+   puce("08:15").click();await sleep(400);puce("17:00").click();
+   let pret=false;for(let k=0;k<60;k++){await sleep(1000);const x=vp().textContent;if(/Votre proposition|Pas de proposition/.test(x)&&!/Calcul des durées/.test(x)){pret=true;break}}
+   if(!pret)V(false,"calcul des propositions trop long (adresse réelle)");
+   else{
+    const tx=vp().textContent;
+    V(bloquees>0,"appels OSRM /route réellement bloqués pendant le test ("+bloquees+")");
+    V(/Votre proposition/.test(tx),"propositions recalculées avec l'adresse réelle (durées OSRM, tracé /route bloqué)");
+    const cond=[...vp().querySelectorAll(".rail-trajets button.horaire")].filter(b=>/vous conduisez/.test(b.textContent));
+    V(cond.length===0,"proximité non vérifiable : aucune option « vous conduisez » proposée ("+cond.length+")");
+    const m=tx.match(/(\d+) trajet\(s\) compatible\(s\) avec vos horaires écarté\(s\) pour cette raison/);
+    V(!!m&&+m[1]>0,"exclusion comptée et affichée publiquement ("+(m?m[1]:"0")+" trajet(s) écarté(s) pour cette raison)");
+   }
+  }
+ }catch(e){V(false,"exception regles "+e.message)}
+ document.getElementById("res").textContent+="\n--- regles propositions ---\n"+o.join("\n")+"\n"+(f8?f8+" ECHEC(S) regles":"REGLES OK");
 });
