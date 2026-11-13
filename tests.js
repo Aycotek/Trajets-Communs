@@ -35,16 +35,18 @@ for(const seed of [2026,1,2,3,4,5]){
   ok(Math.abs(somme-bb.L.cor.prud)<1e-6,"bilan = somme des trajets, graine "+seed);
   ok(bb.L.cor.n<=bb.L.dec.n,"nombre de trajets corroborés <= déclarés");
 }
-/* La graine 1 est un cas réel ou le CO2 net prudent corroboré dépasse le déclaré : retirer un trajet non corroboré dont le net est négatif fait monter le total. */
+/* Avant l'application des limites validées (8 min / 2 km), la graine 1 était un cas documenté de CO2 net non monotone
+   (un trajet écarté au net négatif, gros détour, faisait remonter le total). Ces gros détours ne passent plus les portes :
+   aucune graine testée (1-12, 2026) ne produit plus le cas. On vérifie l'identité comptable générale à la place. */
 {const pp=E.defaults(),rr=E.match(E.population(28,1),pp),bb=E.bilan(rr.trips,pp);
- ok(bb.L.cor.prud>bb.L.dec.prud,"cas documenté : net non monotone (graine 1)");
  const retires=rr.trips.filter(t=>t.accepte&&t.controle.verdict!=="corroboré");
- ok(retires.reduce((a,t)=>a+t.m.prudent,0)<0,"les trajets retirés ont un net négatif cumulé");}
+ ok(Math.abs(bb.L.dec.prud-bb.L.cor.prud-retires.reduce((a,t)=>a+t.m.prudent,0))<1e-6,"identité : déclaré - corroboré = net des trajets retirés (graine 1)");}
 /* Routage : routes précalculées vs estimation. */
 {const pa=E.defaults(),pb=Object.assign({},pa,{routeReel:0});
  const R=globalThis.TCROUTE;ok(R&&R.pts.length>=30&&R.km[1][0]>0,"matrice routière chargée");
  const ra=E.match(E.population(28,2026),pa),rb=E.match(E.population(28,2026),pb);
- ok(ra.trips.length>0&&rb.trips.length>0,"deux modes de calcul fonctionnent");
+ ok(ra.trips.length>0,"mode routes précalculées : propositions présentes");
+ ok(rb.trips.length===0,"mode estimation (routeReel=0) : exclusion prudente, aucune proposition estimée affichée comme vérifiée");
  const i=1,hv=E.hav({lat:R.pts[i][0],lng:R.pts[i][1]},{lat:R.pts[0][0],lng:R.pts[0][1]});
  ok(R.km[i][0]>=hv*0.99,"distance routière >= vol d'oiseau");}
 {const R=globalThis.TCROUTE,L=globalThis.TCLEGS,idx={};R.pts.forEach((q,i)=>{idx[q[0].toFixed(5)+","+q[1].toFixed(5)]=i});
@@ -128,14 +130,15 @@ for(const seed of [2026,1,2,3,4,5]){
   ok(bb.L.pot.n===E.bilan(E.match(po,E.defaults()).trips,E.defaults()).L.pot.n,"le coût au km ne change pas les trajets proposés");}
  const q0=Object.assign({},E.defaults(),{coutKm:0}),b0=E.bilan(E.match(po,q0).trips,q0);
  ok(Math.abs(b0.L.dec.eurDrv)<1e-9||b0.L.dec.eurDrv<=0,"à 0 €/km les conducteurs n'économisent rien");}
-/* Direction du détour et crédit CO2 */
+/* Détour affiché jamais négatif (valeurs routières OSRM réelles conservées ; plafonnage à 0 à l'affichage) et crédit CO2 */
 {const pp=E.defaults();let negs=0;
  for(const seed of [2026,1,2,3]){const po=E.population(28,seed),rr=E.match(po,pp);
-  for(const t of rr.trips){const R=globalThis.TCROUTE;
-   const solo=t.dir==="matin"?E.hav(t.drv.home,t.ev.pts[t.ev.pts.length-1]):0;
-   if(t.ev.detour<0){negs++;const m2=Object.assign({},t.m);ok(t.m.detourCO2>=0,"un détour négatif ne crédite jamais de CO2");}
+  for(const t of rr.trips){
+   ok(t.ev.detourAff>=-1e-9,"détour affiché jamais négatif");
+   ok(Math.abs(t.ev.detourAff-Math.max(0,t.ev.detour))<1e-9,"détour affiché = détour réel plafonné à 0");
+   if(t.ev.negCorrige)negs++;
    ok(t.m.detourCO2>=0,"CO2 de détour jamais négatif");}}
- console.log("détours négatifs (route via arrêt plus courte en km que la directe) : "+negs+" sur 4 semaines, CO2 de détour mis à 0");}
+ console.log("détours négatifs réels (route la plus rapide plus longue en km que via l'arrêt) affichés 0 : "+negs+" sur 4 semaines");}
 /* Unicité de placement : une personne dans un seul trajet par créneau, sur 10 graines */
 {for(const seed of [2026,1,2,3,4,5,6,7,8,9]){const po=E.population(28,seed),rr=E.match(po,E.defaults());
  const seen=new Set();
@@ -162,3 +165,28 @@ ok(f2.readFileSync("extra.css","utf8").includes("@media print"),"impression : fe
 ok(f2.readFileSync("app.js","utf8").includes("Exporter l'état simulé (JSON)"),"export : bouton d'export de l'état simulé présent");
 ok(f2.readFileSync("app.js","utf8").includes("demonstration:true"),"export : l'état exporté est marqué fictif");}
 console.log(n+" vérifications au total");
+
+/* Limites validées (8 min conducteur arrêt compris, 2 km du point de prise en charge) appliquées par le moteur lui-même :
+   chaque trajet produit, toutes vues confondues, les respecte. Vérifié contre la matrice et les géométries OSRM réelles. */
+{const RT=globalThis.TCROUTE,DD=globalThis.TCDATA;
+ if(RT&&RT.routes&&DD){
+  const idxR={};RT.pts.forEach((q,i)=>{idxR[q[0].toFixed(5)+","+q[1].toFixed(5)]=i});
+  const kk=q=>q.lat.toFixed(5)+","+q.lng.toFixed(5);
+  const iS=idxR[kk(DD.SITE)];
+  const geoH=h=>{const i=idxR[kk(h)];const rr=i!==undefined?RT.routes[String(i)]:null;return rr?rr.map(q=>({lat:q[1],lng:q[0]})):null};
+  let vM=0,vP=0;
+  for(const t of r1.trips){
+   const iD=idxR[kk(t.drv.home)];
+   const hab=t.dir==="matin"?RT.min[iD][iS]:RT.min[iS][iD];
+   ok(t.ev.dur-hab<=8+1e-6,"minutes ajoutées au conducteur <= 8, arrêt compris ("+t.drv.id+" "+t.dir+")");vM++;
+   const geo=geoH(t.drv.home);ok(geo,"tracé habituel du conducteur disponible");
+   t.pax.forEach(x=>{const pt=x.mode==="gare"&&x.gare?x.gare:x.home;let m=Infinity;for(const q of geo){const d=E.hav(pt,q);if(d<m)m=d}ok(m<=2+1e-6,"passage à moins de 2 km du point de prise en charge");vP++});
+   const detA=Math.max(0,t.ev.detour),occ=t.pax.length+1;
+   const shareA=(t.ev.solo+detA)*p.coutKm/occ;
+   ok(Math.abs(t.m.share-shareA)<1e-9,"part de frais calculée sur la base cohérente avec le détour affiché");
+   ok(Math.abs(t.m.eurosDrv-(t.pax.length*t.m.share-detA*p.coutKm))<1e-9,"euros conducteur : aucun crédit pour des km en moins quand le détour réel est négatif");
+   ok(Math.abs(t.m.detourCO2-detA*p.ef)<1e-9,"CO2 du détour plafonné à 0");
+  }
+  console.log("limites validées vérifiées trajet par trajet : "+vM+" trajets, "+vP+" prises en charge");
+ }}
+console.log(n+" vérifications au total, limites validées comprises");
